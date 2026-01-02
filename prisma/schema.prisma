@@ -1,10 +1,10 @@
 generator client {
-  provider   = "prisma-client-js"
-  engineType = "binary"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "mysql"
+  url      = env("DATABASE_URL")
 }
 
 model tb_dokumen {
@@ -22,6 +22,7 @@ model tb_orang_tua {
   id_ortu            Int      @id @default(autoincrement())
   id_siswa           Int
   nama_ayah          String   @db.VarChar(50)
+  no_hp_orang_tua    String?  @db.VarChar(20)
   tempat_lahir_ayah  String   @db.VarChar(20)
   tanggal_lahir_ayah DateTime @db.Date
   pendidikan_ayah    String   @db.VarChar(50)
@@ -38,52 +39,43 @@ model tb_orang_tua {
   @@index([id_siswa], map: "id_siswa")
 }
 
-model tb_pembayaran {
-  id_pembayaran     Int                              @id @default(autoincrement())
-  id_tagihan        Int?
-  metode            tb_pembayaran_metode?
-  jumlah_bayar      Int?
-  bukti_pembayaran  String?                          @db.VarChar(255)
-  status_verifikasi tb_pembayaran_status_verifikasi? @default(pending)
-  tanggal_bayar     DateTime?                        @db.Date
-  tb_tagihan        tb_tagihan?                      @relation(fields: [id_tagihan], references: [id_tagihan], onDelete: Restrict, onUpdate: Restrict, map: "tb_pembayaran_ibfk_1")
-
-  @@index([id_tagihan], map: "id_tagihan")
-}
-
 model tb_pendaftaran {
-  id_pendaftar       Int                               @id @default(autoincrement())
-  nisn               String                            @db.VarChar(15)
-  jalur_pendaftaran  tb_pendaftaran_jalur_pendaftaran
-  status_pembayaran  tb_pendaftaran_status_pembayaran? @default(belum_bayar)
-  nama_lengkap       String                            @db.VarChar(100)
-  tempat_lahir       String                            @db.VarChar(50)
-  tanggal_lahir      DateTime                          @db.Date
-  jenis_kelamin      tb_pendaftaran_jenis_kelamin
-  ukuran_baju        tb_pendaftaran_ukuran_baju
-  no_hp              String                            @db.VarChar(15)
-  alamat_rumah       String                            @db.Text
-  rt                 String                            @db.VarChar(3)
-  rw                 String                            @db.VarChar(3)
-  anak_ke            Int
-  jumlah_saudara     Int
-  asal_sekolah       String                            @db.VarChar(100)
-  kode_pos_sekolah   String                            @db.VarChar(10)
-  nama_ayah          String                            @db.VarChar(100)
-  tempat_lahir_ayah  String                            @db.VarChar(50)
-  tanggal_lahir_ayah DateTime                          @db.Date
-  pendidikan_ayah    String                            @db.VarChar(50)
-  pekerjaan_ayah     String                            @db.VarChar(50)
-  penghasilan_ayah   tb_pendaftaran_penghasilan_ayah
-  nama_ibu           String                            @db.VarChar(100)
-  tempat_lahir_ibu   String                            @db.VarChar(50)
-  tanggal_lahir_ibu  DateTime                          @db.Date
-  pendidikan_ibu     String                            @db.VarChar(50)
-  pekerjaan_ibu      String                            @db.VarChar(50)
-  penghasilan_ibu    tb_pendaftaran_penghasilan_ibu
-  created_at         DateTime                          @default(now()) @db.Timestamp(0)
-  updated_at         DateTime                          @default(now()) @db.Timestamp(0)
-  tb_daftar_ulang    tb_daftar_ulang[]
+  id_pendaftar              Int                              @id @default(autoincrement())
+  nisn                      String                           @db.VarChar(15)
+  jalur_pendaftaran         tb_pendaftaran_jalur_pendaftaran
+  tipe_siswa                tb_pendaftaran_tipe_siswa?       @default(regular)
+  nama_lengkap              String                           @db.VarChar(100)
+  tempat_lahir              String                           @db.VarChar(50)
+  tanggal_lahir             DateTime                         @db.Date
+  jenis_kelamin             tb_pendaftaran_jenis_kelamin
+  ukuran_baju               tb_pendaftaran_ukuran_baju
+  no_hp                     String                           @db.VarChar(15)
+  alamat_rumah              String                           @db.Text
+  rt                        String                           @db.VarChar(3)
+  rw                        String                           @db.VarChar(3)
+  anak_ke                   Int
+  jumlah_saudara            Int
+  asal_sekolah              String                           @db.VarChar(100)
+  alamat_sekolah            String?                          @db.VarChar(255)
+  tahun_lulus               Int?                             @db.Year
+  kode_pos_sekolah          String                           @db.VarChar(10)
+  nama_ayah                 String                           @db.VarChar(100)
+  no_hp_orang_tua           String?                          @db.VarChar(20)
+  tempat_lahir_ayah         String                           @db.VarChar(50)
+  tanggal_lahir_ayah        DateTime                         @db.Date
+  pendidikan_ayah           String                           @db.VarChar(50)
+  pekerjaan_ayah            String                           @db.VarChar(50)
+  penghasilan_ayah          String                           @db.VarChar(255)
+  nama_ibu                  String                           @db.VarChar(100)
+  tempat_lahir_ibu          String                           @db.VarChar(50)
+  tanggal_lahir_ibu         DateTime                         @db.Date
+  pendidikan_ibu            String                           @db.VarChar(50)
+  pekerjaan_ibu             String                           @db.VarChar(50)
+  penghasilan_ibu           String                           @db.VarChar(255)
+  created_at                DateTime                         @default(now()) @db.Timestamp(0)
+  updated_at                DateTime                         @default(now()) @db.Timestamp(0)
+  tb_daftar_ulang           tb_daftar_ulang[]
+  tb_pembayaran_pendaftaran tb_pembayaran_pendaftaran[]
 }
 
 model tb_prestasi {
@@ -101,45 +93,32 @@ model tb_prestasi {
 }
 
 model tb_siswa {
-  id_siswa         Int                    @id @default(autoincrement())
-  NISN             String                 @unique(map: "nisn") @db.VarChar(10)
-  nama_lengkap     String                 @db.VarChar(50)
-  tipe_siswa       tb_siswa_tipe_siswa    @default(reguler)
-  tempat_lahir     String                 @db.VarChar(50)
-  tanggal_lahir    DateTime               @db.Date
-  jenis_kelamin    tb_siswa_jenis_kelamin
-  ukuran_baju      tb_siswa_ukuran_baju?
-  no_hp            String                 @db.VarChar(15)
-  alamat           String                 @db.Text
-  rt               String?                @db.VarChar(3)
-  rw               String?                @db.VarChar(3)
-  anak_ke          Int
-  jumlah_saudara   Int
-  asal_sekolah     String                 @db.VarChar(50)
-  tahun_lulus      Int                    @db.Year
-  alamat_sekolah   String                 @db.VarChar(50)
-  kode_pos_sekolah Int?
-  created_at       DateTime               @default(now()) @db.Timestamp(0)
-  updated_at       DateTime               @default(dbgenerated("('0000-00-00 00:00:00')")) @db.Timestamp(0)
-  tb_dokumen       tb_dokumen[]
-  tb_orang_tua     tb_orang_tua[]
-  tb_prestasi      tb_prestasi[]
-  tb_tagihan       tb_tagihan[]
-}
-
-model tb_tagihan {
-  id_tagihan       Int                          @id @default(autoincrement())
-  id_siswa         Int?
-  nama_tagihan     String?                      @db.VarChar(100)
-  total_tagihan    Int?
-  total_terbayar   Int?                         @default(0)
-  status           tb_tagihan_status?           @default(belum_lunas)
-  updated_at       DateTime                     @default(now()) @db.Timestamp(0)
-  jenis_pembayaran tb_tagihan_jenis_pembayaran? @default(bayar_sekarang)
-  tb_pembayaran    tb_pembayaran[]
-  tb_siswa         tb_siswa?                    @relation(fields: [id_siswa], references: [id_siswa], onDelete: Restrict, onUpdate: Restrict, map: "tb_tagihan_ibfk_1")
-
-  @@index([id_siswa], map: "id_siswa")
+  id_siswa                   Int                          @id @default(autoincrement())
+  NISN                       String                       @unique(map: "nisn") @db.VarChar(10)
+  nama_lengkap               String                       @db.VarChar(50)
+  tipe_siswa                 tb_siswa_tipe_siswa          @default(reguler)
+  status_pembayaran          tb_siswa_status_pembayaran   @default(belum_lunas)
+  jalur_pendaftaran          tb_siswa_jalur_pendaftaran
+  tempat_lahir               String                       @db.VarChar(50)
+  tanggal_lahir              DateTime                     @db.Date
+  jenis_kelamin              tb_siswa_jenis_kelamin
+  ukuran_baju                tb_siswa_ukuran_baju?
+  no_hp                      String                       @db.VarChar(15)
+  alamat                     String                       @db.Text
+  rt                         String?                      @db.VarChar(3)
+  rw                         String?                      @db.VarChar(3)
+  anak_ke                    Int
+  jumlah_saudara             Int
+  asal_sekolah               String                       @db.VarChar(50)
+  tahun_lulus                Int                          @db.Year
+  alamat_sekolah             String                       @db.VarChar(50)
+  kode_pos_sekolah           Int?
+  created_at                 DateTime                     @default(now()) @db.Timestamp(0)
+  updated_at                 DateTime                     @default(now()) @updatedAt @db.Timestamp(0)
+  tb_dokumen                 tb_dokumen[]
+  tb_orang_tua               tb_orang_tua[]
+  tb_pembayaran_daftar_ulang tb_pembayaran_daftar_ulang[]
+  tb_prestasi                tb_prestasi[]
 }
 
 model tb_users {
@@ -153,17 +132,57 @@ model tb_users {
 }
 
 model tb_daftar_ulang {
-  id_daftar_ulang   Int                                @id @default(autoincrement())
-  id_pendaftar      Int
-  tanggal_bayar     DateTime?                          @db.Date
-  jumlah_bayar      Int?
-  metode_pembayaran tb_daftar_ulang_metode_pembayaran?
-  bukti_pembayaran  String?                            @db.VarChar(255)
-  status_validasi   tb_daftar_ulang_status_validasi?   @default(menunggu)
-  created_at        DateTime                           @default(now()) @db.Timestamp(0)
-  tb_pendaftaran    tb_pendaftaran                     @relation(fields: [id_pendaftar], references: [id_pendaftar], onUpdate: Restrict, map: "tb_daftar_ulang_ibfk_1")
+  id_daftar_ulang            Int                                @id @default(autoincrement())
+  id_pendaftar               Int
+  tanggal_bayar              DateTime?                          @db.Date
+  jumlah_bayar               Int?
+  metode_pembayaran          tb_daftar_ulang_metode_pembayaran?
+  bukti_pembayaran           String?                            @db.VarChar(255)
+  status_validasi            tb_daftar_ulang_status_validasi?   @default(menunggu)
+  created_at                 DateTime                           @default(now()) @db.Timestamp(0)
+  tb_pendaftaran             tb_pendaftaran                     @relation(fields: [id_pendaftar], references: [id_pendaftar], onUpdate: Restrict, map: "tb_daftar_ulang_ibfk_1")
+  tb_pembayaran_daftar_ulang tb_pembayaran_daftar_ulang[]
 
   @@index([id_pendaftar], map: "id_pendaftar")
+}
+
+model tb_jenis_pembayaran {
+  id_jenis_pembayaran        Int                          @id @default(autoincrement())
+  nama_pembayaran            String                       @db.VarChar(100)
+  nominal                    Int
+  tb_pembayaran_daftar_ulang tb_pembayaran_daftar_ulang[]
+}
+
+model tb_pembayaran_daftar_ulang {
+  id_pembayaran_daftar_ulang Int                                          @id @default(autoincrement())
+  id_daftar_ulang            Int
+  id_siswa                   Int?
+  id_jenis_pembayaran        Int
+  nominal                    Int
+  tanggal_bayar              DateTime?                                    @db.Date
+  metode_pembayaran          tb_pembayaran_daftar_ulang_metode_pembayaran
+  status                     tb_pembayaran_daftar_ulang_status?           @default(belum)
+  bukti_pembayaran           String?                                      @db.VarChar(255)
+  tb_daftar_ulang            tb_daftar_ulang                              @relation(fields: [id_daftar_ulang], references: [id_daftar_ulang], onUpdate: Restrict, map: "tb_pembayaran_daftar_ulang_ibfk_1")
+  tb_jenis_pembayaran        tb_jenis_pembayaran                          @relation(fields: [id_jenis_pembayaran], references: [id_jenis_pembayaran], onUpdate: Restrict, map: "tb_pembayaran_daftar_ulang_ibfk_2")
+  tb_siswa                   tb_siswa?                                    @relation(fields: [id_siswa], references: [id_siswa], onDelete: Restrict, onUpdate: Restrict, map: "tb_pembayaran_daftar_ulang_ibfk_3")
+
+  @@index([id_daftar_ulang], map: "id_daftar_ulang")
+  @@index([id_jenis_pembayaran], map: "id_jenis_pembayaran")
+  @@index([id_siswa], map: "id_siswa")
+}
+
+model tb_pembayaran_pendaftaran {
+  id_bayar_pendaftaran Int                                          @id @default(autoincrement())
+  id_pendaftaran       Int
+  nominal              Int                                          @default(200000)
+  tanggal_bayar        DateTime?                                    @default(dbgenerated("(curdate())")) @db.Date
+  metode_pembayaran    tb_pembayaran_pendaftaran_metode_pembayaran? @default(cash)
+  status               tb_pembayaran_pendaftaran_status?            @default(belum)
+  bukti_pembayaran     String?                                      @db.VarChar(255)
+  tb_pendaftaran       tb_pendaftaran                               @relation(fields: [id_pendaftaran], references: [id_pendaftar], onUpdate: Restrict, map: "tb_pembayaran_pendaftaran_ibfk_1")
+
+  @@index([id_pendaftaran], map: "id_pendaftaran")
 }
 
 enum tb_dokumen_jenis_dokumen {
@@ -172,11 +191,6 @@ enum tb_dokumen_jenis_dokumen {
   ijazah
   pas_foto
   kio___kks___pip___pkh @map("kio / kks / pip / pkh")
-}
-
-enum tb_pembayaran_metode {
-  cash
-  transfer
 }
 
 enum tb_prestasi_jenis_prestasi {
@@ -193,16 +207,6 @@ enum tb_prestasi_tingkat {
   Internasional
 }
 
-enum tb_pembayaran_status_verifikasi {
-  pending
-  verified
-}
-
-enum tb_tagihan_status {
-  lunas
-  belum_lunas
-}
-
 enum tb_siswa_jenis_kelamin {
   Putra
   Putri
@@ -216,20 +220,10 @@ enum tb_siswa_ukuran_baju {
   XXL
 }
 
-enum tb_tagihan_jenis_pembayaran {
-  bayar_sekarang
-  bayar_nanti
-}
-
 enum tb_pendaftaran_jalur_pendaftaran {
   umum
   tahfidz
   prestasi
-}
-
-enum tb_pendaftaran_status_pembayaran {
-  belum_bayar
-  sudah_bayar
 }
 
 enum tb_siswa_tipe_siswa {
@@ -265,16 +259,39 @@ enum tb_pendaftaran_ukuran_baju {
   XXL
 }
 
-enum tb_pendaftaran_penghasilan_ayah {
-  kurang_dari_1_000_000 @map("kurang dari 1.000.000")
-  // 1.000.001 - 3.000.000 @map("1.000.001 - 3.000.000")
-  // 3.000.001 - 5.000.000 @map("3.000.001 - 5.000.000")
-  lebih_dari_5_000_000  @map("lebih dari 5.000.000")
+enum tb_pembayaran_daftar_ulang_status {
+  belum
+  cicil
+  lunas
 }
 
-enum tb_pendaftaran_penghasilan_ibu {
-  kurang_dari_1_000_000 @map("kurang dari 1.000.000")
-  // 1.000.001 - 3.000.000 @map("1.000.001 - 3.000.000")
-  // 3.000.001 - 5.000.000 @map("3.000.001 - 5.000.000")
-  lebih_dari_5_000_000  @map("lebih dari 5.000.000")
+enum tb_pembayaran_pendaftaran_status {
+  belum
+  lunas
+}
+
+enum tb_pembayaran_pendaftaran_metode_pembayaran {
+  cash
+  transfer
+}
+
+enum tb_pembayaran_daftar_ulang_metode_pembayaran {
+  cash
+  transfer
+}
+
+enum tb_siswa_status_pembayaran {
+  belum_lunas
+  lunas
+}
+
+enum tb_siswa_jalur_pendaftaran {
+  umum
+  tahfidz
+  prestasi
+}
+
+enum tb_pendaftaran_tipe_siswa {
+  regular
+  bantuan
 }
