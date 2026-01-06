@@ -16,7 +16,6 @@ export default function DaftarSiswaPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterGender, setFilterGender] = useState("Semua");
   const [currentPage, setCurrentPage] = useState(1);
-  
   const [itemsPerPage, setItemsPerPage] = useState(5);
 
   useEffect(() => {
@@ -40,11 +39,9 @@ export default function DaftarSiswaPage() {
   const filteredData = useMemo(() => {
     return data.filter(s => {
       const matchSearch = 
-        s.NISN?.toLowerCase().includes(searchQuery.toLowerCase()) || // Pastikan NISN kapital sesuai DB
+        s.NISN?.toLowerCase().includes(searchQuery.toLowerCase()) || 
         s.nama_lengkap?.toLowerCase().includes(searchQuery.toLowerCase());
-      
       const matchFilter = filterGender === "Semua" || s.jenis_kelamin === filterGender;
-      
       return matchSearch && matchFilter;
     });
   }, [data, searchQuery, filterGender]);
@@ -68,7 +65,6 @@ export default function DaftarSiswaPage() {
       "Jalur Pendaftaran": s.jalur_pendaftaran,
       "Update Terbaru": s.updated_at ? s.updated_at.split('T')[0] : "-"
     })));
-    
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Daftar Siswa");
     XLSX.writeFile(wb, "Daftar_Siswa_PPDB.xlsx");
@@ -77,17 +73,21 @@ export default function DaftarSiswaPage() {
   if (loading) return <div className="ml-64 p-10 font-light text-gray-400">Memuat Data Siswa...</div>;
 
   return (
-    <div className="ml-64 bg-gray-50 min-h-screen pb-12 px-8 pt-8 antialiased font-sans">
-      <h2 className="text-xl font-bold text-gray-800 mb-6">Daftar Siswa</h2>
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <StatCard label="Total Siswa" value={stats.total} icon={<Users size={22} strokeWidth={1.5} />} iconBg="bg-green-50" iconColor="text-green-600" />
-        <StatCard label="Siswa Putra" value={stats.putra} icon={<Mars size={22} strokeWidth={1.5} />} iconBg="bg-yellow-50" iconColor="text-yellow-600" />
-        <StatCard label="Siswa Putri" value={stats.putri} icon={<Venus size={22} strokeWidth={1.5} />} iconBg="bg-red-50" iconColor="text-red-600" />
-        <StatCard label="Siswa Belum Lunas" value={stats.belumLunas} icon={<CreditCard size={22} strokeWidth={1.5} />} iconBg="bg-indigo-50" iconColor="text-indigo-600" />
+    /* px-5 pt-5 (20px) untuk layout kiri-kanan-atas */
+    <div className="ml-64 bg-gray-100 min-h-screen pb-10 px-5 pt-5 antialiased font-sans">
+      <h2 className="text-xl font-bold text-gray-800 mb-5">Daftar Siswa</h2>
+      
+      {/* 1. Stat Cards dengan gap-5 (20px) */}
+      <div className="flex flex-wrap gap-5 mb-5">
+        <StatCard label="Total Siswa" value={stats.total} icon={<Users size={22} />} iconBg="bg-green-50" iconColor="text-green-600" />
+        <StatCard label="Siswa Putra" value={stats.putra} icon={<Mars size={22} />} iconBg="bg-yellow-50" iconColor="text-yellow-600" />
+        <StatCard label="Siswa Putri" value={stats.putri} icon={<Venus size={22} />} iconBg="bg-red-50" iconColor="text-red-600" />
+        <StatCard label="Siswa Belum Lunas" value={stats.belumLunas} icon={<CreditCard size={22} />} iconBg="bg-indigo-50" iconColor="text-indigo-600" />
       </div>
 
-      <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-6 overflow-hidden">
-        <div className="flex flex-col md:flex-row justify-between gap-4">
+      {/* 2. Table Section */}
+      <div className="bg-white p-6 rounded-[12px] shadow-sm border border-gray-100 mb-5 overflow-hidden">
+        <div className="flex flex-col md:flex-row justify-between gap-5">
           <div className="flex flex-1 gap-3">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
@@ -101,7 +101,7 @@ export default function DaftarSiswaPage() {
             </div>
             <div className="relative">
               <select 
-                className="appearance-none pl-10 pr-8 py-2 bg-gray-50 border border-gray-200 rounded-[8px] text-sm focus:outline-none"
+                className="appearance-none pl-10 pr-8 py-2 bg-gray-50 border border-gray-200 rounded-[8px] text-sm focus:outline-none cursor-pointer"
                 value={filterGender}
                 onChange={(e) => setFilterGender(e.target.value)}
               >
@@ -123,70 +123,67 @@ export default function DaftarSiswaPage() {
         </div>
 
         <table className="w-full border-collapse mt-6">
-<thead>
-  <tr className="text-[#94A3B8] border-b border-gray-50 text-[10px]">
-    <th className="text-left py-5 px-6 font-normal uppercase tracking-widest whitespace-nowrap">NISN</th>
-    <th className="text-left py-5 px-6 font-normal uppercase tracking-widest whitespace-nowrap">Nama Siswa</th>
-    <th className="text-center py-5 px-6 font-normal uppercase tracking-widest whitespace-nowrap">Jenis Kelamin</th>
-    <th className="text-left py-5 px-6 font-normal uppercase tracking-widest whitespace-nowrap">Tempat, Tanggal Lahir</th>
-    <th className="text-center py-5 px-6 font-normal uppercase tracking-widest whitespace-nowrap">Tipe Siswa</th>
-    <th className="text-center py-5 px-6 font-normal uppercase tracking-widest whitespace-nowrap">Jalur</th>
-    <th className="text-center py-5 px-6 font-normal uppercase tracking-widest whitespace-nowrap">Update Terbaru</th>
-    <th className="text-center py-5 px-6 font-normal uppercase tracking-widest whitespace-nowrap">Detail</th>
-  </tr>
-</thead>
-         <tbody className="divide-y divide-gray-50 text-[#3b3b3b]">
-  {paginatedData.length > 0 ? (
-    paginatedData.map((item, i) => (
-      <tr key={i} className="hover:bg-gray-50/20 transition-colors duration-200">
-        <td className="py-5 px-6 text-[12px] font-normal">{item.NISN}</td>
-        <td className="py-5 px-6 text-[13px] font-normal">{item.nama_lengkap}</td>
-        <td className="py-5 px-6 text-center">
-          <span className={`px-4 py-1 rounded-full text-[11px] font-medium ${
-            item.jenis_kelamin === 'Putra' ? 'bg-indigo-50 text-indigo-500' : 'bg-orange-50 text-orange-500'
-          }`}>
-            {item.jenis_kelamin}
-          </span>
-        </td>
-        <td className="py-5 px-6 text-[12px] font-normal">
-          {item.tempat_lahir}, {item.tanggal_lahir?.split('T')[0]}
-        </td>
-        <td className="py-5 px-6 text-center">
-          <span className={`px-4 py-1 rounded-full text-[11px] font-medium capitalize ${
-            item.tipe_siswa === 'Reguler' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-500'
-          }`}>
-            {item.tipe_siswa}
-          </span>
-        </td>
-        <td className="py-5 px-6 text-center text-[12px] font-normal capitalize">{item.jalur_pendaftaran}</td>
-        <td className="py-5 px-6 text-center text-[11px] text-gray-400 font-normal">
-          {item.updated_at?.split('T')[0]}
-        </td>
-        <td className="py-5 px-6 text-center">
-          <Link href={`/client/admin/DaftarSiswa/${item.id_siswa || item.id || item.NISN}`}>
-            <button className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors">
-              <Info size={18} />
-            </button>
-          </Link>
-        </td>
-      </tr>
-    ))
-  ) : (
-    /* PESAN JIKA DATA TIDAK DITEMUKAN */
-    <tr>
-      <td colSpan={8} className="py-20 text-center">
-        <div className="flex flex-col items-center justify-center gap-3">
-          <div className="bg-gray-50 p-4 rounded-full">
-            <Search size={40} className="text-gray-200" />
-          </div>
-          <div className="space-y-1">
-            <p className="text-gray-500 text-sm font-semibold">Data siswa tidak ditemukan</p>
-          </div>
-        </div>
-      </td>
-    </tr>
-  )}
-</tbody>
+          <thead>
+            <tr className="text-[#94A3B8] border-b border-gray-50 text-[10px]">
+              <th className="text-left py-5 px-6 font-normal uppercase tracking-widest whitespace-nowrap">NISN</th>
+              <th className="text-left py-5 px-6 font-normal uppercase tracking-widest whitespace-nowrap">Nama Siswa</th>
+              <th className="text-center py-5 px-6 font-normal uppercase tracking-widest whitespace-nowrap">Jenis Kelamin</th>
+              <th className="text-left py-5 px-6 font-normal uppercase tracking-widest whitespace-nowrap">Tempat, Tanggal Lahir</th>
+              <th className="text-center py-5 px-6 font-normal uppercase tracking-widest whitespace-nowrap">Tipe Siswa</th>
+              <th className="text-center py-5 px-6 font-normal uppercase tracking-widest whitespace-nowrap">Jalur</th>
+              <th className="text-center py-5 px-6 font-normal uppercase tracking-widest whitespace-nowrap">Update Terbaru</th>
+              <th className="text-center py-5 px-6 font-normal uppercase tracking-widest whitespace-nowrap">Detail</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-50 text-[#3b3b3b]">
+            {paginatedData.length > 0 ? (
+              paginatedData.map((item, i) => (
+                <tr key={i} className="hover:bg-gray-50/20 transition-colors duration-200">
+                  <td className="py-5 px-6 text-[12px] font-normal">{item.NISN}</td>
+                  <td className="py-5 px-6 text-[13px] font-normal">{item.nama_lengkap}</td>
+                  <td className="py-5 px-6 text-center">
+                    <span className={`px-4 py-1 rounded-full text-[11px] font-medium ${
+                      item.jenis_kelamin === 'Putra' ? 'bg-indigo-50 text-indigo-500' : 'bg-orange-50 text-orange-500'
+                    }`}>
+                      {item.jenis_kelamin}
+                    </span>
+                  </td>
+                  <td className="py-5 px-6 text-[12px] font-normal">
+                    {item.tempat_lahir}, {item.tanggal_lahir?.split('T')[0]}
+                  </td>
+                  <td className="py-5 px-6 text-center">
+                    <span className={`px-4 py-1 rounded-full text-[11px] font-medium capitalize ${
+                      item.tipe_siswa === 'Reguler' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-500'
+                    }`}>
+                      {item.tipe_siswa}
+                    </span>
+                  </td>
+                  <td className="py-5 px-6 text-center text-[12px] font-normal capitalize">{item.jalur_pendaftaran}</td>
+                  <td className="py-5 px-6 text-center text-[11px] text-gray-400 font-normal">
+                    {item.updated_at?.split('T')[0]}
+                  </td>
+                  <td className="py-5 px-6 text-center">
+                    <Link href={`/client/admin/DaftarSiswa/${item.id_siswa || item.id || item.NISN}`}>
+                      <button className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors">
+                        <Info size={18} />
+                      </button>
+                    </Link>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={8} className="py-20 text-center">
+                  <div className="flex flex-col items-center justify-center gap-3">
+                    <div className="bg-gray-50 p-4 rounded-full">
+                      <Search size={40} className="text-gray-200" />
+                    </div>
+                    <p className="text-gray-500 text-sm font-semibold">Data siswa tidak ditemukan</p>
+                  </div>
+                </td>
+              </tr>
+            )}
+          </tbody>
         </table>
 
         {/* Pagination UI */}
@@ -216,7 +213,6 @@ export default function DaftarSiswaPage() {
               <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(totalPages)} className="p-1 text-gray-400 hover:text-green-600 disabled:opacity-30"><ChevronsRight size={18}/></button>
             </div>
             
-            {/* 2. Bagian Items Per Page yang diperbaiki */}
             <div className="text-[12px] text-gray-400 flex items-center gap-2">
                <div className="relative">
                   <select 
@@ -240,17 +236,21 @@ export default function DaftarSiswaPage() {
   );
 }
 
+// Update StatCard agar ukurannya presisi (268.25x108) seperti di Dashboard
 function StatCard({ label, value, icon, iconBg, iconColor }: any) {
   return (
-    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-5 transition-all hover:shadow-md">
-      <div className={`w-12 h-12 ${iconBg} ${iconColor} rounded-full flex items-center justify-center`}>
+    <div 
+      style={{ width: '268.25px', height: '108px' }}
+      className="bg-white px-[20px] py-[24px] rounded-[12px] shadow-sm border border-gray-100 flex items-center gap-4 transition-all hover:shadow-md"
+    >
+      <div className={`w-11 h-11 ${iconBg} ${iconColor} rounded-full flex items-center justify-center flex-shrink-0`}>
         {icon}
       </div>
-      <div>
-        <p className="text-2xl font-bold text-gray-800 leading-none">
+      <div className="overflow-hidden">
+        <p className="text-[18px] font-bold text-gray-800 leading-none truncate">
           {(value || 0).toLocaleString('id-ID')}
         </p>
-        <p className="text-[11px] text-gray-400 mt-1 font-medium uppercase tracking-widest">
+        <p className="text-[10px] text-gray-400 mt-1 font-medium uppercase tracking-tight">
           {label}
         </p>
       </div>

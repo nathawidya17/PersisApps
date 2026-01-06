@@ -143,55 +143,57 @@ export default function DetailSiswaPage() {
   }
 
   return (
-    <div className="ml-64 bg-[#F9FBFC] min-h-screen pb-12 px-10 pt-6 antialiased font-sans">
-      {/* Breadcrumb */}
-      <nav className="flex items-center gap-2 text-[11px] text-gray-400 mb-4 font-medium ">
+    /* px-5 pt-5 (20px) agar sama dengan Dashboard & Daftar Siswa */
+    <div className="ml-64 bg-gray-100 min-h-screen pb-10 px-5 pt-5 antialiased font-sans">
+      
+      {/* Breadcrumb - Spacing mb-5 (20px) */}
+      <nav className="flex items-center gap-2 text-[11px] text-gray-400 mb-5 font-medium tracking-wider">
         <span>Daftar Siswa</span> 
         <span className="text-gray-300">/</span> 
         <span className="text-[#068A50]">Detail Siswa</span>
       </nav>
 
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <button onClick={() => router.back()} className="flex items-center gap-2 text-gray-800 hover:opacity-70 transition-all">
+      {/* Header - Spacing mb-5 (20px) */}
+      <div className="flex items-center justify-between mb-5">
+        <button onClick={() => router.back()} className="flex items-center gap-2 text-gray-800 hover:opacity-70 transition-all cursor-pointer">
           <ChevronLeft size={20} className="text-gray-700" />
-          <h2 className="text-lg font-bold tracking-tight text-gray-900">Detail Siswa</h2>
+          <h2 className="text-xl font-bold tracking-tight text-gray-900">Detail Siswa</h2>
         </button>
-        <div className="flex gap-2">
+        <div className="flex gap-3">
           <button 
             onClick={() => router.push(`/client/admin/DaftarSiswa/${id}/edit`)}
-            className="px-4 py-2 bg-[#5BA47E] text-white rounded-lg text-[12px] font-semibold shadow-sm flex items-center gap-2 transition-all hover:bg-[#4a8a68]"
+            className="px-5 py-2.5 bg-[#5BA47E] text-white rounded-[8px] text-[12px] font-semibold shadow-sm flex items-center gap-2 transition-all hover:bg-[#4a8a68] cursor-pointer"
           >
-            <Edit size={14} /> Edit
+            <Edit size={14} /> Edit Detail
           </button>
           <button 
             onClick={handleDelete}
-            className="px-4 py-2 bg-white border border-gray-200 text-red-500 rounded-lg text-[12px] font-semibold shadow-sm flex items-center gap-2 transition-all hover:bg-red-50"
+            className="px-5 py-2.5 bg-white border border-gray-200 text-red-500 rounded-[8px] text-[12px] font-semibold shadow-sm flex items-center gap-2 transition-all hover:bg-red-50 cursor-pointer"
           >
             <Trash2 size={14} /> Hapus
           </button>
         </div>
       </div>
 
-      {/* Profile & NISN Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <div className="lg:col-span-2 bg-white p-8 rounded-[24px] shadow-sm border border-gray-100">
+      {/* Profile & NISN Cards - Menggunakan gap-5 (20px) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
+        <div className="lg:col-span-2 bg-white p-8 rounded-[12px] shadow-sm border border-gray-100">
           <div className="mb-8">
             <h3 className="text-2xl font-bold text-gray-900 tracking-tight">{s.nama_lengkap}</h3>
-            <p className="text-[12px] text-gray-400 mt-1">{s.email || "user@gmail.com"}</p>
+            <p className="text-[12px] text-gray-400 mt-1 uppercase tracking-widest">{s.email || "user@gmail.com"}</p>
           </div>
           <div className="grid grid-cols-4 gap-y-8 gap-x-4">
             <InfoItem label="Tempat, Tanggal Lahir" value={`${s.tempat_lahir}, ${s.tanggal_lahir?.split('T')[0]}`} />
             <InfoItem label="Jenis Kelamin" value={s.jenis_kelamin} />
             <InfoItem label="Anak ke" value={s.anak_ke} />
             <InfoItem label="Jumlah Saudara" value={s.jumlah_saudara} />
-            <InfoItem label="Jalur Pendaftaran" value={s.jalur_pendaftaran} />
+            <InfoItem label="Jalur Pendaftaran" value={<span className="capitalize">{s.jalur_pendaftaran}</span>} />
             <InfoItem label="No Hp" value={s.no_hp} />
             <InfoItem label="Ukuran Baju" value={s.ukuran_baju} />
             <InfoItem label="Alamat Lengkap" value={s.alamat} />
           </div>
         </div>
-        <div className="bg-white p-8 rounded-[24px] shadow-sm border border-gray-100">
+        <div className="bg-white p-8 rounded-[12px] shadow-sm border border-gray-100">
           <h3 className="text-2xl font-bold text-gray-900 mb-1 tracking-tight">NISN</h3>
           <p className="text-[13px] font-semibold text-gray-300 mb-10">{s.NISN}</p>
           <div className="grid grid-cols-2 gap-y-8">
@@ -203,9 +205,9 @@ export default function DetailSiswaPage() {
         </div>
       </div>
 
-      {/* Parent Info Card */}
-      <div className="bg-white p-8 rounded-[24px] shadow-sm border border-gray-100 mb-8">
-        <h3 className="text-[15px] font-bold text-gray-900 mb-8 tracking-tight">Data Orang Tua</h3>
+      {/* Parent Info Card - Spacing mb-5 (20px) */}
+      <div className="bg-white p-8 rounded-[12px] shadow-sm border border-gray-100 mb-5">
+        <h3 className="text-[15px] font-bold text-gray-900 mb-8 tracking-tight uppercase tracking-widest">Data Orang Tua</h3>
         <div className="grid grid-cols-5 gap-y-10 gap-x-4">
           <InfoItem label="Nama Ayah" value={ortu?.nama_ayah} />
           <InfoItem label="TTL Ayah" value={ortu?.tempat_lahir_ayah ? `${ortu.tempat_lahir_ayah}, ${ortu.tanggal_lahir_ayah?.split('T')[0]}` : "-"} />
@@ -221,13 +223,13 @@ export default function DetailSiswaPage() {
         </div>
       </div>
 
-      {/* Tabs Navigation */}
-      <div className="flex gap-10 mb-8 border-b border-gray-100 px-2">
+      {/* Tabs Navigation - Spacing mb-5 (20px) */}
+      <div className="flex gap-10 mb-5 border-b border-gray-100 px-2">
         {['Tagihan', 'Dokumen', 'Prestasi'].map((tab) => (
           <button 
             key={tab} 
             onClick={() => setActiveTab(tab.toLowerCase())} 
-            className={`text-[12px] font-bold pb-4 transition-all ${activeTab === tab.toLowerCase() ? 'border-b-2 border-[#068A50] text-gray-900' : 'text-gray-400'}`}
+            className={`text-[12px] font-bold pb-4 transition-all cursor-pointer ${activeTab === tab.toLowerCase() ? 'border-b-2 border-[#068A50] text-gray-900' : 'text-gray-400'}`}
           >
             {tab}
           </button>
@@ -236,12 +238,13 @@ export default function DetailSiswaPage() {
 
       {/* Tab Content: Tagihan */}
       {activeTab === 'tagihan' && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="space-y-5">
+          {/* Tagihan Summary - gap-5 (20px) */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
             <TagihanCard label="Total Tagihan" value={tagihanStats.total} />
             <TagihanCard label="Total Terbayar" value={tagihanStats.terbayar} />
             <TagihanCard label="Sisa Tagihan" value={tagihanStats.sisa} />
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-1">
+            <div className="bg-white p-6 rounded-[12px] border border-gray-100 shadow-sm flex flex-col gap-1">
               <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Status Pembayaran</p>
               <p className={`text-[17px] font-bold ${tagihanStats.isLunas ? 'text-green-600' : 'text-red-500'}`}>
                 {tagihanStats.isLunas ? 'Lunas' : 'Belum Lunas'}
@@ -249,7 +252,8 @@ export default function DetailSiswaPage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          {/* Tagihan Table Section */}
+          <div className="bg-white rounded-[12px] shadow-sm border border-gray-100 overflow-hidden">
             <div className="p-6 flex justify-between items-center border-b border-gray-50">
               <div className="flex gap-3">
                 <div className="relative">
@@ -259,7 +263,7 @@ export default function DetailSiswaPage() {
                     value={searchTerm} 
                     onChange={(e) => setSearchTerm(e.target.value)} 
                     placeholder="Cari tagihan..." 
-                    className="pl-10 pr-4 py-2 bg-gray-50 border border-gray-100 rounded-lg text-[12px] w-64 focus:outline-none" 
+                    className="pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-100 rounded-lg text-[12px] w-64 focus:outline-none" 
                   />
                 </div>
                 <select 
@@ -272,11 +276,11 @@ export default function DetailSiswaPage() {
                   <option value="belum_lunas">Belum Lunas</option>
                 </select>
               </div>
-              <div className="flex gap-2">
-                <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-[11px] text-gray-500 font-bold shadow-sm hover:bg-gray-50 transition-all">
+              <div className="flex gap-3">
+                <button onClick={handleExport} className="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 rounded-lg text-[11px] text-gray-500 font-bold shadow-sm hover:bg-gray-50 transition-all cursor-pointer">
                   <Download size={14}/> Export
                 </button>
-                <button className="flex items-center gap-2 px-4 py-2 bg-white border border-green-100 text-[#068A50] rounded-lg text-[11px] font-bold hover:bg-green-50 transition-all">
+                <button className="flex items-center gap-2 px-5 py-2.5 bg-white border border-green-100 text-[#068A50] rounded-lg text-[11px] font-bold hover:bg-green-50 transition-all cursor-pointer">
                   <Plus size={14}/> Transaksi
                 </button>
               </div>
@@ -295,7 +299,7 @@ export default function DetailSiswaPage() {
                     <th className="px-8 py-5 text-center">Aksi</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-gray-50 text-[#3b3b3b]">
                   {filteredTagihan.length > 0 ? (
                     filteredTagihan.map((jt: any, i: number) => {
                       const riwayat = s?.tb_pembayaran_daftar_ulang || [];
@@ -314,7 +318,7 @@ export default function DetailSiswaPage() {
                           </td>
                           <td className="px-8 py-5 text-center text-gray-400 font-medium">{s.updated_at?.split('T')[0]}</td>
                           <td className="px-8 py-5 text-center">
-                            <button className="text-[#068A50] hover:bg-green-50 p-1 rounded-md transition-all"><Info size={16} /></button>
+                            <button className="text-[#068A50] hover:bg-green-50 p-2 rounded-md transition-all cursor-pointer"><Info size={16} /></button>
                           </td>
                         </tr>
                       );
@@ -337,7 +341,7 @@ export default function DetailSiswaPage() {
           </div>
         </div>
       )}
-      <footer className="mt-12 text-[10px] text-gray-300 font-semibold text-center tracking-widest uppercase">© PERSIS 212 KUDANG</footer>
+      <footer className="mt-10 text-[11px] text-gray-300 font-semibold text-center tracking-widest uppercase">© PERSIS 212 KUDANG</footer>
     </div>
   );
 }
@@ -354,7 +358,7 @@ function InfoItem({ label, value }: { label: string, value: any }) {
 
 function TagihanCard({ label, value }: { label: string, value: number }) {
   return (
-    <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-1">
+    <div className="bg-white p-6 rounded-[12px] border border-gray-100 shadow-sm flex flex-col gap-1">
       <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{label}</span>
       <span className="text-[17px] font-bold text-gray-800 tracking-tight">IDR {value.toLocaleString('id-ID')}</span>
     </div>

@@ -11,10 +11,6 @@ import {
   Clock, Wallet, CheckCircle 
 } from 'lucide-react';
 
-/**
- * DASHBOARD PAGE COMPONENT
- * Final Optimized Version: Line Chart Clean & Bar Chart Bold Square.
- */
 export default function DashboardPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -46,11 +42,12 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="ml-64 bg-[#F5F5F5] min-h-screen pb-12 px-8 pt-8 font-sans antialiased">
-      <h2 className="text-2xl font-semibold text-[#2D2D2D] mb-8">Dashboard</h2>
+    /* px-5 setara dengan 20px untuk layout kiri kanan */
+    <div className="ml-64 bg-[#F5F5F5] min-h-screen pb-10 px-5 pt-5 font-sans antialiased">
+      <h2 className="text-2xl font-semibold text-[#2D2D2D] mb-5">Dashboard</h2>
       
-      {/* 1. Overview Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-6">
+      {/* 1. Overview Statistics Cards - gap-5 setara dengan 20px */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-5">
         <StatCard 
           label="Total Pendaftar" 
           value={data?.cards?.totalP} 
@@ -81,8 +78,8 @@ export default function DashboardPage() {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
-        {/* 2. Line Chart: Clean Style (No Dots) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
+        {/* 2. Line Chart Section */}
         <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm">
           <div className="flex justify-between items-center mb-6">
             <p className="font-bold text-lg text-[#068A50]">Penerimaan Peserta Didik Baru</p>
@@ -98,7 +95,6 @@ export default function DashboardPage() {
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#9E9E9E' }} dy={10} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#9E9E9E' }} allowDecimals={false} />
                 <Tooltip contentStyle={tooltipStyle} />
-                {/* dot={false} untuk menghilangkan bulet-buletan */}
                 <Line type="monotone" dataKey="pendaftar" stroke="#4CAF50" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
                 <Line type="monotone" dataKey="calonSiswa" stroke="#FBC02D" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
               </LineChart>
@@ -144,9 +140,9 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* 4. Financial Section: Bold Bar Style */}
-      <div className="bg-white p-6 rounded-xl shadow-sm mb-6">
-        <h3 className="text-[#2D2D2D] font-medium text-base mb-6">Laporan Keuangan PPDB</h3>
+      {/* 4. Financial Section */}
+      <div className="bg-white p-6 rounded-xl shadow-sm mb-5">
+        <h3 className="text-[#2D2D2D] font-medium text-base mb-6">Uang Masuk PPDB</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
           <StatCard 
             label="Total Uang Masuk" 
@@ -184,10 +180,9 @@ export default function DashboardPage() {
                 tickLine={false} 
                 tick={{fontSize: 11, fill: '#9E9E9E'}}
                 width={50}
-                tickFormatter={(val) => val >= 1000000 ? `${val/1000000}M` : val >= 1000 ? `${val/1000}K` : val}
+                tickFormatter={(val) => val >= 1000000 ? `${val/1000000} Juta` : val >= 1000 ? `${val/1000}K` : val}
               />
-              <Tooltip cursor={{fill: '#F9F9F9'}} formatter={(val: number | undefined) => val !== undefined ? val.toLocaleString('id-ID') : '0'} />
-              {/* barSize diperbesar (gendutan) dan radius 0 (kotak) */}
+              <Tooltip cursor={{fill: '#F9F9F9'}} formatter={(val: any) => `IDR ${val?.toLocaleString('id-ID')}`} />
               <Bar dataKey="uangPendaftaran" fill="#4CAF50" radius={0} barSize={40} />
               <Bar dataKey="uangDaftarUlang" fill="#FBC02D" radius={0} barSize={40} />
             </BarChart>
@@ -195,7 +190,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* 5. Tables Section */}
+      {/* 5. Tables Section - gap-5 untuk jarak antar tabel */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <TableComponent title="Pendaftar Baru" items={data?.tables?.pendaftarBaru || []} type="pendaftar" />
         <TableComponent title="Calon Siswa Baru" items={data?.tables?.calonSiswaBaru || []} type="calon" />
@@ -205,8 +200,7 @@ export default function DashboardPage() {
   );
 }
 
-// --- REUSABLE COMPONENTS ---
-
+// Sub-komponen tetap sama, pastikan padding internal card menggunakan p-5 (20px) atau p-6 (24px) sesuai estetika.
 function StatCard({ label, value, icon, bgColor, textColor, isFinance = false }: any) {
   return (
     <div className={`bg-white p-5 rounded-xl shadow-sm flex items-center gap-4 transition-all duration-300 hover:shadow-md ${isFinance ? 'border border-[#F0F0F0]' : ''}`}>
@@ -254,7 +248,7 @@ function TableComponent({ title, items, type }: any) {
                   </td>
                   <td className="py-4 text-center text-[#2D2D2D] text-xs font-normal">
                     {isTransaksi ? (
-                        <span className="px-2 py-0.5  rounded text-[10px] font-bold uppercase">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase">
                             {item.metode}
                         </span>
                     ) : dataSiswa?.nama_lengkap}

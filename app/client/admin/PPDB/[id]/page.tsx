@@ -47,34 +47,32 @@ export default function DetailCalonSiswaPage() {
     }).format(amount);
   };
 
-const masterTagihan = data?.jenis_pembayaran || []; 
+  const masterTagihan = data?.jenis_pembayaran || []; 
+  const riwayatDaftarUlang = s?.tb_daftar_ulang?.[0]?.tb_pembayaran_daftar_ulang || [];
+  const riwayatPendaftaran = s?.tb_pembayaran_pendaftaran || [];
+  const semuaRiwayatBayar = [...riwayatDaftarUlang, ...riwayatPendaftaran];
 
-const riwayatDaftarUlang = s?.tb_daftar_ulang?.[0]?.tb_pembayaran_daftar_ulang || [];
-const riwayatPendaftaran = s?.tb_pembayaran_pendaftaran || [];
+  const daftarTagihanFinal = masterTagihan.map((jenis: any) => {
+    const totalTerbayar = semuaRiwayatBayar
+      .filter((p: any) => {
+        if (p.id_jenis_pembayaran) {
+          return Number(p.id_jenis_pembayaran) === Number(jenis.id_jenis_pembayaran);
+        }
+        return Number(jenis.id_jenis_pembayaran) === 1;
+      })
+      .reduce((acc: number, curr: any) => acc + (Number(curr.nominal) || 0), 0);
 
-const semuaRiwayatBayar = [...riwayatDaftarUlang, ...riwayatPendaftaran];
+    const nominalTagihan = Number(jenis.nominal) || 0;
+    const sisa = Math.max(0, nominalTagihan - totalTerbayar);
 
-const daftarTagihanFinal = masterTagihan.map((jenis: any) => {
-  const totalTerbayar = semuaRiwayatBayar
-    .filter((p: any) => {
-      if (p.id_jenis_pembayaran) {
-        return Number(p.id_jenis_pembayaran) === Number(jenis.id_jenis_pembayaran);
-      }
-      return Number(jenis.id_jenis_pembayaran) === 1;
-    })
-    .reduce((acc: number, curr: any) => acc + (Number(curr.nominal) || 0), 0);
-
-  const nominalTagihan = Number(jenis.nominal) || 0;
-  const sisa = Math.max(0, nominalTagihan - totalTerbayar);
-
-  return {
-    nama: jenis.nama_pembayaran,
-    total: nominalTagihan,
-    terbayar: totalTerbayar,
-    sisa: sisa,
-    lunas: totalTerbayar >= nominalTagihan && nominalTagihan > 0
-  };
-});
+    return {
+      nama: jenis.nama_pembayaran,
+      total: nominalTagihan,
+      terbayar: totalTerbayar,
+      sisa: sisa,
+      lunas: totalTerbayar >= nominalTagihan && nominalTagihan > 0
+    };
+  });
 
   const grandTotalTagihan = daftarTagihanFinal.reduce((acc: number, curr: any) => acc + curr.total, 0);
   const grandTotalTerbayar = daftarTagihanFinal.reduce((acc: number, curr: any) => acc + curr.terbayar, 0);
@@ -82,37 +80,43 @@ const daftarTagihanFinal = masterTagihan.map((jenis: any) => {
   const statusLunasGlobal = grandTotalTagihan > 0 && grandSisaTagihan === 0;
 
   return (
-    <div className="ml-64 bg-[#F9FBFC] min-h-screen pb-12 px-10 pt-6 antialiased font-sans">
-      <div className="flex flex-col mb-6">
-        <p className="text-[10px] text-gray-400 mb-2">PPDB / <span className="text-green-600">Detail Calon Siswa</span></p>
+    /* px-5 pt-5 (20px) agar sama dengan Dashboard & Daftar Siswa */
+    <div className="ml-64 bg-gray-50 min-h-screen pb-10 px-5 pt-5 antialiased font-sans">
+      
+      {/* Breadcrumb & Header - Spacing mb-5 (20px) */}
+      <div className="flex flex-col mb-5">
+        <p className="text-[10px] text-gray-400 mb-2 uppercase tracking-widest">
+          PPDB / <span className="text-green-600">Detail Calon Siswa</span>
+        </p>
         <div className="flex items-center justify-between">
-          <button onClick={() => router.back()} className="flex items-center gap-2 text-gray-800 hover:opacity-70 transition-all">
-            <ChevronLeft size={20} />
-            <h2 className="text-lg font-bold">Detail Calon Siswa</h2>
+          <button onClick={() => router.back()} className="flex items-center gap-2 text-gray-800 hover:opacity-70 transition-all cursor-pointer">
+            <ChevronLeft size={20} className="text-gray-700" />
+            <h2 className="text-xl font-bold tracking-tight">Detail Calon Siswa</h2>
           </button>
           <div className="flex gap-3">
-            <button className="px-5 py-2 bg-[#5BA47E] text-white rounded-lg text-sm font-semibold flex items-center gap-2 shadow-sm">
+            <button className="px-5 py-2.5 bg-[#5BA47E] text-white rounded-[8px] text-sm font-semibold flex items-center gap-2 shadow-sm transition-all hover:bg-[#4a8a68] cursor-pointer">
               <CheckCircle size={18} /> Validasi Calon Siswa
             </button>
-            <button className="px-5 py-2 bg-white border border-gray-200 text-green-600 rounded-lg text-sm font-semibold flex items-center gap-2">
+            <button className="px-5 py-2.5 bg-white border border-gray-200 text-green-600 rounded-[8px] text-sm font-semibold flex items-center gap-2 transition-all hover:bg-green-50 cursor-pointer">
               <Gift size={18} /> Beri Keringanan
             </button>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
-        <div className="lg:col-span-3 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-          <div className="mb-6">
-             <h3 className="text-xl font-bold text-gray-900">{s?.nama_lengkap}</h3>
+      {/* Main Info Cards - gap-5 (20px) */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-5 mb-5">
+        <div className="lg:col-span-3 bg-white p-8 rounded-[12px] shadow-sm border border-gray-100">
+          <div className="mb-8">
+             <h3 className="text-2xl font-bold text-gray-900 tracking-tight">{s?.nama_lengkap}</h3>
              <div className="flex items-center gap-2 mt-1">
-                <span className="text-xs text-gray-400">{s?.email || "siswa@persis.com"}</span>
+                <span className="text-xs text-gray-400 uppercase tracking-widest">{s?.email || "siswa@persis.com"}</span>
                 <span className={`px-2 py-0.5 text-[10px] font-bold rounded uppercase ${isDaftarUlang ? "bg-green-50 text-green-600" : "bg-yellow-50 text-yellow-600"}`}>
                   {data?.status_tahap}
                 </span>
              </div>
           </div>
-          <div className="grid grid-cols-4 gap-y-6">
+          <div className="grid grid-cols-4 gap-y-8 gap-x-4">
             <InfoItem label="Tempat Tanggal Lahir" value={`${s?.tempat_lahir}, ${s?.tanggal_lahir?.split('T')[0]}`} />
             <InfoItem label="Jenis Kelamin" value={s?.jenis_kelamin} />
             <InfoItem label="Anak ke" value={s?.anak_ke} />
@@ -124,21 +128,22 @@ const daftarTagihanFinal = masterTagihan.map((jenis: any) => {
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-          <h3 className="text-xs font-bold text-gray-400 uppercase mb-1">NISN</h3>
-          <p className="text-sm font-bold text-gray-800 mb-6">{s?.nisn}</p>
-          <div className="grid grid-cols-2 gap-y-6 gap-x-2">
+        <div className="bg-white p-8 rounded-[12px] shadow-sm border border-gray-100">
+          <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">NISN</h3>
+          <p className="text-sm font-bold text-gray-800 mb-8">{s?.nisn}</p>
+          <div className="grid grid-cols-2 gap-y-8 gap-x-2">
             <InfoItem label="Status Siswa" value={<span className="text-green-600 font-bold capitalize">{s?.tipe_siswa}</span>} />
             <InfoItem label="Asal Sekolah" value={s?.asal_sekolah} />
             <InfoItem label="Tahun Lulus" value={s?.tahun_lulus} />
-            <InfoItem label="Alamat Sekolah" value={<span className="capitalize">{s?.alamat_sekolah}</span>} />
+            <InfoItem label="Alamat Sekolah" value={<span className="capitalize truncate block max-w-full">{s?.alamat_sekolah}</span>} />
           </div>
         </div>
       </div>
 
-      <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 mb-6">
-        <h3 className="text-lg font-bold text-gray-800 mb-6">Data Orang Tua</h3>
-        <div className="grid grid-cols-5 gap-8">
+      {/* Parent Card - Spacing mb-5 (20px) */}
+      <div className="bg-white p-8 rounded-[12px] shadow-sm border border-gray-100 mb-5">
+        <h3 className="text-[15px] font-bold text-gray-900 mb-8 tracking-tight uppercase tracking-widest">Data Orang Tua</h3>
+        <div className="grid grid-cols-5 gap-y-10 gap-x-4">
           <InfoItem label="Nama Ayah" value={s?.nama_ayah} />
           <InfoItem label="Lahir Ayah" value={`${s?.tempat_lahir_ayah || '-'}, ${s?.tanggal_lahir_ayah?.split('T')[0] || '-'}`} />
           <InfoItem label="Pendidikan" value={s?.pendidikan_ayah} />
@@ -158,21 +163,23 @@ const daftarTagihanFinal = masterTagihan.map((jenis: any) => {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="flex border-b border-gray-100">
+      {/* Tab Section */}
+      <div className="bg-white rounded-[12px] shadow-sm border border-gray-100 overflow-hidden">
+        <div className="flex border-b border-gray-100 px-2">
           <TabButton active={activeTab === "tagihan"} onClick={() => setActiveTab("tagihan")} label="Daftar Tagihan" />
           <TabButton active={activeTab === "dokumen"} onClick={() => setActiveTab("dokumen")} label="Dokumen" />
           <TabButton active={activeTab === "prestasi"} onClick={() => setActiveTab("prestasi")} label="Prestasi" />
         </div>
 
-        <div className="p-6">
-          <div className="grid grid-cols-4 gap-4 mb-8">
+        <div className="p-8">
+          {/* Summary Cards - gap-5 (20px) */}
+          <div className="grid grid-cols-4 gap-5 mb-8">
             <SummaryCard label="Total Tagihan" value={formatIDR(grandTotalTagihan)} />
             <SummaryCard label="Total Terbayar" value={formatIDR(grandTotalTerbayar)} className="text-green-600" />
             <SummaryCard label="Sisa Tagihan" value={formatIDR(grandSisaTagihan)} className="text-red-600" />
-            <div className={`p-4 rounded-xl border ${statusLunasGlobal ? "border-green-100 bg-green-50/30" : "border-red-100 bg-red-50/30"}`}>
-               <p className={`text-[10px] font-bold uppercase ${statusLunasGlobal ? "text-green-400" : "text-red-400"}`}>Status Pembayaran</p>
-               <p className={`text-lg font-bold mt-1 ${statusLunasGlobal ? "text-green-600" : "text-red-600"}`}>
+            <div className={`p-5 rounded-[12px] border flex flex-col gap-1 ${statusLunasGlobal ? "border-green-100 bg-green-50/30" : "border-red-100 bg-red-50/30"}`}>
+               <p className={`text-[10px] font-bold uppercase tracking-widest ${statusLunasGlobal ? "text-green-400" : "text-red-400"}`}>Status Pembayaran</p>
+               <p className={`text-[17px] font-bold ${statusLunasGlobal ? "text-green-600" : "text-red-600"}`}>
                  {statusLunasGlobal ? "Lunas" : "Belum Lunas"}
                </p>
             </div>
@@ -180,24 +187,24 @@ const daftarTagihanFinal = masterTagihan.map((jenis: any) => {
 
           <table className="w-full text-left">
             <thead>
-              <tr className="text-[10px] text-gray-400 font-bold uppercase border-b border-gray-50">
-                <th className="py-4 font-semibold">Nama Tagihan</th>
-                <th className="py-4 font-semibold">Total Tagihan</th>
-                <th className="py-4 font-semibold">Total Terbayar</th>
-                <th className="py-4 font-semibold">Sisa Tagihan</th>
-                <th className="py-4 font-semibold">Status</th>
+              <tr className="text-[10px] text-gray-400 font-bold uppercase tracking-widest border-b border-gray-50">
+                <th className="py-5 px-4 font-semibold">Nama Tagihan</th>
+                <th className="py-5 px-4 font-semibold">Total Tagihan</th>
+                <th className="py-5 px-4 font-semibold">Total Terbayar</th>
+                <th className="py-5 px-4 font-semibold text-center">Sisa Tagihan</th>
+                <th className="py-5 px-4 text-center font-semibold">Status</th>
               </tr>
             </thead>
-            <tbody className="text-xs">
+            <tbody className="text-xs text-[#3b3b3b]">
               {daftarTagihanFinal.length > 0 ? (
                 daftarTagihanFinal.map((tagihan: any, idx: number) => (
-                  <tr key={idx} className="border-b border-gray-50 hover:bg-gray-50/50">
-                    <td className="py-4 font-medium text-gray-600">{tagihan.nama}</td>
-                    <td className="py-4 text-gray-400">{formatIDR(tagihan.total)}</td>
-                    <td className="py-4 text-green-600 font-medium">{formatIDR(tagihan.terbayar)}</td>
-                    <td className="py-4 text-red-600 font-medium">{formatIDR(tagihan.sisa)}</td>
-                    <td className="py-4">
-                      <span className={`px-2 py-1 rounded text-[9px] font-bold uppercase ${tagihan.lunas ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+                  <tr key={idx} className="border-b border-gray-50 hover:bg-gray-50/50 transition-all">
+                    <td className="py-5 px-4 font-bold text-gray-700">{tagihan.nama}</td>
+                    <td className="py-5 px-4 font-medium text-gray-400">{formatIDR(tagihan.total)}</td>
+                    <td className="py-5 px-4 text-green-600 font-bold">{formatIDR(tagihan.terbayar)}</td>
+                    <td className="py-5 px-4 text-red-600 text-center font-bold">{formatIDR(tagihan.sisa)}</td>
+                    <td className="py-5 px-4 text-center">
+                      <span className={`px-3 py-1 rounded-full text-[9px] font-bold uppercase whitespace-nowrap ${tagihan.lunas ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
                         {tagihan.lunas ? 'Lunas' : 'Belum Lunas'}
                       </span>
                     </td>
@@ -205,29 +212,37 @@ const daftarTagihanFinal = masterTagihan.map((jenis: any) => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5} className="py-10 text-center text-gray-400">Tidak ada data tagihan.</td>
+                  <td colSpan={5} className="py-20 text-center text-gray-400 font-medium">Tidak ada data tagihan.</td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
       </div>
+      <footer className="mt-10 text-[11px] text-gray-300 font-semibold text-center tracking-widest uppercase">© PERSIS 212 KUDANG</footer>
     </div>
   );
 }
 
+// --- Sub-Components ---
+
 function InfoItem({ label, value }: { label: string, value: any }) {
   return (
     <div className="flex flex-col gap-1">
-      <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{label}</span>
-      <span className="text-[11px] font-semibold text-gray-700 leading-tight">{value || "-"}</span>
+      <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{label}</span>
+      <span className="text-[12px] font-semibold text-gray-700 leading-tight">{value || "-"}</span>
     </div>
   );
 }
 
 function TabButton({ active, label, onClick }: any) {
   return (
-    <button onClick={onClick} className={`px-8 py-4 text-xs font-bold transition-all border-b-2 ${active ? 'border-green-600 text-green-600' : 'border-transparent text-gray-400'}`}>
+    <button 
+      onClick={onClick} 
+      className={`px-8 py-5 text-[12px] font-bold transition-all border-b-2 cursor-pointer ${
+        active ? 'border-[#068A50] text-[#068A50]' : 'border-transparent text-gray-400'
+      }`}
+    >
       {label}
     </button>
   );
@@ -235,9 +250,9 @@ function TabButton({ active, label, onClick }: any) {
 
 function SummaryCard({ label, value, className = "" }: any) {
   return (
-    <div className="p-4 rounded-xl border border-gray-100 bg-white shadow-sm">
-      <p className="text-[10px] font-bold text-gray-400 uppercase">{label}</p>
-      <p className={`text-lg font-bold mt-1 ${className || "text-gray-800"}`}>{value}</p>
+    <div className="p-5 rounded-[12px] border border-gray-100 bg-white shadow-sm flex flex-col gap-1">
+      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{label}</p>
+      <p className={`text-[17px] font-bold tracking-tight ${className || "text-gray-800"}`}>{value}</p>
     </div>
   );
 }
