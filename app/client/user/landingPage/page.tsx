@@ -1,33 +1,14 @@
 import React from 'react';
 import Image from 'next/image';
+import Footer from '@/components/user/Footer';
+import Navbar from '@/components/user/Navbar';
 
 export default function LandingPage() {
   return (
     <div className="min-h-screen font-sans text-[#333333] bg-white">
       
       {/* --- NAVBAR --- */}
-      <nav className="flex items-center justify-between px-8 py-4 bg-white border-b lg:px-24">
-        <div className="flex items-center gap-2">
-          <div className="relative w-10 h-10">
-            <Image 
-              src="/logo.png" 
-              alt="Logo Persis Kudang" 
-              fill 
-              className="object-contain"
-            />
-          </div>
-          {/* Warna Hijau Custom: #0A8F47 */}
-          <span className="font-bold text-[#0A8F47] tracking-tight uppercase">PERSIS KUDANG 212</span>
-        </div>
-        <div className="hidden space-x-8 text-sm font-semibold md:flex">
-          <a href="#" className="text-[#0A8F47]">Beranda</a>
-          <a href="#" className="text-[#333333] hover:text-[#0A8F47]">Daftar</a>
-          <a href="#" className="text-[#333333] hover:text-[#0A8F47]">Hubungi Kami</a>
-        </div>
-        <button className="px-6 py-4 text-sm font-bold text-white transition-all rounded-md bg-[#0A8F47] hover:bg-[#087a3c]">
-          Login Admin
-        </button>
-      </nav>
+     <Navbar/>
 
       {/* --- HERO SECTION --- */}
       <section className="relative w-full min-h-[600px] flex items-center bg-white overflow-hidden">
@@ -154,46 +135,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* --- FOOTER --- */}
-      <footer className="px-8 py-20 bg-[#F0F9F4] lg:px-24 border-t border-green-100">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-16">
-          <div className="lg:col-span-2">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="relative w-10 h-10">
-                <Image src="/logo.png" alt="Logo Footer" fill className="object-contain" />
-              </div>
-              <span className="font-black text-[#0A8F47] text-lg uppercase tracking-tight">PERSIS KUDANG 212</span>
-            </div>
-            <p className="max-w-md text-base leading-relaxed text-[#555555] font-medium">
-              Pesantren Persis 212 Kudang merupakan lembaga pendidikan Islam berbasis pesantren di Kabupaten Garut yang mengintegrasikan pendidikan agama dan umum, serta aktif dalam dakwah dan kegiatan sosial.
-            </p>
-          </div>
-          
-          <div>
-            <h4 className="mb-8 font-black text-[#333333] text-xl">Kontak</h4>
-            <ul className="space-y-5 text-base text-[#555555] font-medium">
-              <li className="flex items-center gap-4">
-                <span className="text-xl">📧</span> persiskudang@gmail.com
-              </li>
-              <li className="flex items-center gap-4">
-                <span className="text-xl">📞</span> +62 811-2222-3333
-              </li>
-              <li className="flex items-center gap-4 leading-relaxed">
-                <span className="text-xl">📍</span> Jl. Kudang 1, Wanajaya, Kec. Wanaraja, Kabupaten Garut, Jawa Barat 44183
-              </li>
-            </ul>
-          </div>
-        </div>
-        
-        <div className="flex flex-col items-center justify-between pt-12 mt-20 border-t border-green-200 md:flex-row">
-          <p className="text-sm text-[#888888] font-bold uppercase tracking-widest">@ 2025 Point Studio. All rights reserved</p>
-          <div className="flex gap-4 mt-6 md:mt-0">
-            <a href="#" className="w-10 h-10 flex items-center justify-center rounded-full bg-[#0A8F47] text-white hover:scale-110 transition-transform">f</a>
-            <a href="#" className="w-10 h-10 flex items-center justify-center rounded-full bg-[#0A8F47] text-white hover:scale-110 transition-transform">ig</a>
-            <a href="#" className="w-10 h-10 flex items-center justify-center rounded-full bg-[#0A8F47] text-white hover:scale-110 transition-transform">yt</a>
-          </div>
-        </div>
-      </footer>
+     <Footer />
     </div>
   );
 }
