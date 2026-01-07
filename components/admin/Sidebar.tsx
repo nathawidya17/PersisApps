@@ -40,10 +40,15 @@ export default function Sidebar() {
       {/* Navigasi Menu */}
       <nav className="mt-8 flex-1 pl-4 space-y-2">
         {menuItems.map((item) => {
-          // Logic isActive: support sub-route (misal: /siswa/[id] tetap aktif di menu Daftar Siswa)
-          const isActive = pathname.startsWith(item.href);
-          
-          return (
+            // Logic isActive yang diperbarui:
+            let isActive = pathname.startsWith(item.href);
+
+            // Tambahan: Jika sedang di halaman pembayaran/riwayat, nyalakan menu PPDB
+            if (item.label === 'PPDB' && pathname.includes('/admin/pembayaran')) {
+              isActive = true;
+            }
+            
+            return (
             <Link
               key={item.label}
               href={item.href}

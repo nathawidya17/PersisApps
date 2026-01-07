@@ -3,7 +3,6 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-// route.ts
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   try {
     const { id } = await params; 
@@ -15,7 +14,6 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     const idAngka = parseInt(id);
     const isIdMurni = !isNaN(idAngka) && !id.startsWith('0');
 
-    // Ambil data master jenis pembayaran dari database
     const jenis_pembayaran = await prisma.tb_jenis_pembayaran.findMany();
 
     const detail = await prisma.tb_pendaftaran.findFirst({
@@ -39,12 +37,31 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       return NextResponse.json({ error: "Data tidak ditemukan" }, { status: 404 });
     }
 
+    // --- LOGIKA STATUS PEMBAYARAN ---
+    // Mengambil data dari tb_pembayaran_pendaftaran yang sudah di-include di atas
+    const dataBayar = detail.tb_pembayaran_pendaftaran[0];
+    let label_status_pembayaran = "Belum Bayar";
+
+    // Ganti logika pengecekan di route.ts (GET) Anda menjadi seperti ini:
+if (dataBayar) {
+  const currentStatus = dataBayar.status as string; // Paksa menjadi string untuk perbandingan aman
+
+  if (currentStatus === "menunggu") {
+    label_status_pembayaran = "Menunggu Verifikasi";
+  } else if (currentStatus === "lunas") {
+    label_status_pembayaran = "Lunas";
+  } else if (currentStatus === "cicil") {
+    label_status_pembayaran = "Cicil";
+  } else {
+    label_status_pembayaran = "Belum Lunas";
+  }
+}
     const status_tahap = (detail.tb_daftar_ulang?.length ?? 0) > 0 ? "Daftar Ulang" : "Pendaftaran";
 
-    // Kirim jenis_pembayaran ke frontend
     return NextResponse.json({
       detail,
       status_tahap,
+      label_status_pembayaran, // Gunakan variabel ini di Frontend Anda
       jenis_pembayaran 
     });
 

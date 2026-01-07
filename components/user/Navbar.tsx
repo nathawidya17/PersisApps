@@ -22,19 +22,14 @@ const Navbar = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  /**
-   * FUNGSI ISACTIVE
-   * Mengatur warna hijau jika pathname saat ini sesuai dengan rute.
-   * Rute Beranda: /client/user/landingPage
-   */
   const isActive = (path: string) => {
     if (path === '/' && pathname === '/client/user/landingPage') return true;
     return pathname === path;
   };
 
-  // Mengecek apakah salah satu sub-menu pendaftaran sedang diakses
   const isDaftarActive = [
-    '/client/user/pendaftaran', 
+    '/client/user/persyaratanPPDB', 
+    '/client/user/form-pendaftaran',
     '/client/user/daftar-ulang', 
     '/client/user/cek-tagihan'
   ].some(path => pathname.includes(path));
@@ -87,8 +82,8 @@ const Navbar = () => {
                 bgIcon="bg-amber-50"
                 title="Pendaftaran PPDB"
                 desc="Formulir pendaftaran siswa baru tahap awal."
-                href="/client/user/pendaftaran"
-                active={pathname === '/client/user/pendaftaran'}
+                href="/client/user/persyaratanPPDB"
+                active={pathname === '/client/user/persyaratanPPDB'}
                 onClick={() => setIsDropdownOpen(false)}
               />
               <DropdownItem 

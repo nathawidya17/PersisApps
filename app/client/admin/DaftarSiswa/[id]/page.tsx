@@ -289,7 +289,7 @@ export default function DetailSiswaPage() {
             <div className="min-h-[300px]">
               <table className="w-full text-left">
                 <thead className="bg-gray-50/50">
-                  <tr className="text-[10px] text-gray-400 font-bold border-b border-gray-50 uppercase tracking-widest">
+                  <tr className="text-[10px] text-gray-400 font-bold border-b border-gray-50  tracking-widest">
                     <th className="px-8 py-5">Nama Tagihan</th>
                     <th className="px-8 py-5">Total</th>
                     <th className="px-8 py-5 text-center">Terbayar</th>

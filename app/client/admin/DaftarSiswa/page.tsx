@@ -125,14 +125,14 @@ export default function DaftarSiswaPage() {
         <table className="w-full border-collapse mt-6">
           <thead>
             <tr className="text-[#94A3B8] border-b border-gray-50 text-[10px]">
-              <th className="text-left py-5 px-6 font-normal uppercase tracking-widest whitespace-nowrap">NISN</th>
-              <th className="text-left py-5 px-6 font-normal uppercase tracking-widest whitespace-nowrap">Nama Siswa</th>
-              <th className="text-center py-5 px-6 font-normal uppercase tracking-widest whitespace-nowrap">Jenis Kelamin</th>
-              <th className="text-left py-5 px-6 font-normal uppercase tracking-widest whitespace-nowrap">Tempat, Tanggal Lahir</th>
-              <th className="text-center py-5 px-6 font-normal uppercase tracking-widest whitespace-nowrap">Tipe Siswa</th>
-              <th className="text-center py-5 px-6 font-normal uppercase tracking-widest whitespace-nowrap">Jalur</th>
-              <th className="text-center py-5 px-6 font-normal uppercase tracking-widest whitespace-nowrap">Update Terbaru</th>
-              <th className="text-center py-5 px-6 font-normal uppercase tracking-widest whitespace-nowrap">Detail</th>
+              <th className="text-left py-5 px-6 font-normal  tracking-widest whitespace-nowrap">NISN</th>
+              <th className="text-left py-5 px-6 font-normal  tracking-widest whitespace-nowrap">Nama Siswa</th>
+              <th className="text-center py-5 px-6 font-normal  tracking-widest whitespace-nowrap">Jenis Kelamin</th>
+              <th className="text-left py-5 px-6 font-normal  tracking-widest whitespace-nowrap">Tempat, Tanggal Lahir</th>
+              <th className="text-center py-5 px-6 font-normal  tracking-widest whitespace-nowrap">Tipe Siswa</th>
+              <th className="text-center py-5 px-6 font-normal  tracking-widest whitespace-nowrap">Jalur</th>
+              <th className="text-center py-5 px-6 font-normal  tracking-widest whitespace-nowrap">Update Terbaru</th>
+              <th className="text-center py-5 px-6 font-normal  tracking-widest whitespace-nowrap">Detail</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50 text-[#3b3b3b]">

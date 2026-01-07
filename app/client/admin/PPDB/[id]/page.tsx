@@ -3,7 +3,10 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import axios from "axios";
-import { ChevronLeft, CheckCircle, Info, Gift } from "lucide-react";
+import { 
+  ChevronLeft, CheckCircle, Info, Gift, 
+  Search, Filter, Download 
+} from "lucide-react";
 
 export default function DetailCalonSiswaPage() {
   const params = useParams();
@@ -14,6 +17,10 @@ export default function DetailCalonSiswaPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState("tagihan");
+
+  // State untuk Fitur Search & Filter
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
 
   useEffect(() => {
     if (id && id !== "undefined") {
@@ -52,26 +59,47 @@ export default function DetailCalonSiswaPage() {
   const riwayatPendaftaran = s?.tb_pembayaran_pendaftaran || [];
   const semuaRiwayatBayar = [...riwayatDaftarUlang, ...riwayatPendaftaran];
 
+  // Logic Perhitungan Tagihan
   const daftarTagihanFinal = masterTagihan.map((jenis: any) => {
-    const totalTerbayar = semuaRiwayatBayar
-      .filter((p: any) => {
-        if (p.id_jenis_pembayaran) {
-          return Number(p.id_jenis_pembayaran) === Number(jenis.id_jenis_pembayaran);
-        }
-        return Number(jenis.id_jenis_pembayaran) === 1;
-      })
+    const transaksiTerkait = semuaRiwayatBayar.filter((p: any) => {
+      if (p.id_jenis_pembayaran) {
+        return Number(p.id_jenis_pembayaran) === Number(jenis.id_jenis_pembayaran);
+      }
+      return Number(jenis.id_jenis_pembayaran) === 1;
+    });
+
+    const totalTerbayar = transaksiTerkait
+      .filter((p: any) => p.status === "lunas" || p.status === "cicil")
       .reduce((acc: number, curr: any) => acc + (Number(curr.nominal) || 0), 0);
+
+    const adaPending = transaksiTerkait.some((p: any) => p.status === "menunggu");
+    
+    const updateTerakhir = transaksiTerkait.length > 0 
+      ? transaksiTerkait.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())[0].updated_at 
+      : s?.updated_at;
 
     const nominalTagihan = Number(jenis.nominal) || 0;
     const sisa = Math.max(0, nominalTagihan - totalTerbayar);
 
     return {
+      id_jenis: jenis.id_jenis_pembayaran,
       nama: jenis.nama_pembayaran,
       total: nominalTagihan,
       terbayar: totalTerbayar,
       sisa: sisa,
-      lunas: totalTerbayar >= nominalTagihan && nominalTagihan > 0
+      lunas: totalTerbayar >= nominalTagihan && nominalTagihan > 0,
+      isPending: adaPending,
+      updateTerbaru: updateTerakhir
     };
+  });
+
+  // Filter & Search Logic
+  const filteredTagihan = daftarTagihanFinal.filter((t: any) => {
+    const matchSearch = t.nama.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchFilter = filterStatus === "all" 
+      ? true 
+      : filterStatus === "lunas" ? t.lunas : !t.lunas;
+    return matchSearch && matchFilter;
   });
 
   const grandTotalTagihan = daftarTagihanFinal.reduce((acc: number, curr: any) => acc + curr.total, 0);
@@ -80,12 +108,10 @@ export default function DetailCalonSiswaPage() {
   const statusLunasGlobal = grandTotalTagihan > 0 && grandSisaTagihan === 0;
 
   return (
-    /* px-5 pt-5 (20px) agar sama dengan Dashboard & Daftar Siswa */
-    <div className="ml-64 bg-gray-50 min-h-screen pb-10 px-5 pt-5 antialiased font-sans">
-      
-      {/* Breadcrumb & Header - Spacing mb-5 (20px) */}
+    <div className="ml-64 bg-gray-100 min-h-screen pb-10 px-5 pt-5 antialiased font-sans">
+      {/* Header & Breadcrumb */}
       <div className="flex flex-col mb-5">
-        <p className="text-[10px] text-gray-400 mb-2 uppercase tracking-widest">
+        <p className="text-[10px] text-gray-400 mb-2 tracking-widest">
           PPDB / <span className="text-green-600">Detail Calon Siswa</span>
         </p>
         <div className="flex items-center justify-between">
@@ -104,9 +130,9 @@ export default function DetailCalonSiswaPage() {
         </div>
       </div>
 
-      {/* Main Info Cards - gap-5 (20px) */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-5 mb-5">
-        <div className="lg:col-span-3 bg-white p-8 rounded-[12px] shadow-sm border border-gray-100">
+      {/* Info Cards Utama */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
+        <div className="lg:col-span-2 bg-white p-8 rounded-[12px] shadow-sm border border-gray-100">
           <div className="mb-8">
              <h3 className="text-2xl font-bold text-gray-900 tracking-tight">{s?.nama_lengkap}</h3>
              <div className="flex items-center gap-2 mt-1">
@@ -129,9 +155,9 @@ export default function DetailCalonSiswaPage() {
         </div>
 
         <div className="bg-white p-8 rounded-[12px] shadow-sm border border-gray-100">
-          <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">NISN</h3>
-          <p className="text-sm font-bold text-gray-800 mb-8">{s?.nisn}</p>
-          <div className="grid grid-cols-2 gap-y-8 gap-x-2">
+          <h3 className="text-2xl font-bold text-gray-900 tracking-tight ">NISN</h3>
+          <p className="text-[13px] font-bold text-gray-300 mb-10">{s?.nisn}</p>
+          <div className="grid grid-cols-2 gap-y-8">
             <InfoItem label="Status Siswa" value={<span className="text-green-600 font-bold capitalize">{s?.tipe_siswa}</span>} />
             <InfoItem label="Asal Sekolah" value={s?.asal_sekolah} />
             <InfoItem label="Tahun Lulus" value={s?.tahun_lulus} />
@@ -140,7 +166,7 @@ export default function DetailCalonSiswaPage() {
         </div>
       </div>
 
-      {/* Parent Card - Spacing mb-5 (20px) */}
+      {/* Parent Data */}
       <div className="bg-white p-8 rounded-[12px] shadow-sm border border-gray-100 mb-5">
         <h3 className="text-[15px] font-bold text-gray-900 mb-8 tracking-tight uppercase tracking-widest">Data Orang Tua</h3>
         <div className="grid grid-cols-5 gap-y-10 gap-x-4">
@@ -163,7 +189,7 @@ export default function DetailCalonSiswaPage() {
         </div>
       </div>
 
-      {/* Tab Section */}
+      {/* Tab & Table Section */}
       <div className="bg-white rounded-[12px] shadow-sm border border-gray-100 overflow-hidden">
         <div className="flex border-b border-gray-100 px-2">
           <TabButton active={activeTab === "tagihan"} onClick={() => setActiveTab("tagihan")} label="Daftar Tagihan" />
@@ -172,7 +198,6 @@ export default function DetailCalonSiswaPage() {
         </div>
 
         <div className="p-8">
-          {/* Summary Cards - gap-5 (20px) */}
           <div className="grid grid-cols-4 gap-5 mb-8">
             <SummaryCard label="Total Tagihan" value={formatIDR(grandTotalTagihan)} />
             <SummaryCard label="Total Terbayar" value={formatIDR(grandTotalTerbayar)} className="text-green-600" />
@@ -185,34 +210,75 @@ export default function DetailCalonSiswaPage() {
             </div>
           </div>
 
+          {/* TABLE TOOLBAR: SEARCH, FILTER, EXPORT (SESUAI GAMBAR) */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex gap-3 items-center">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
+                <input 
+                  type="text" 
+                  placeholder="Cari....." 
+                  className="pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-[8px] text-sm outline-none focus:border-green-500 transition-all w-64 placeholder:text-gray-300"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <button className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-[8px] text-gray-400 text-sm font-medium hover:bg-gray-50 transition-all cursor-pointer">
+                <Filter size={18} /> Filter
+              </button>
+            </div>
+            <button className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-[8px] text-gray-400 text-sm font-medium hover:bg-gray-50 transition-all cursor-pointer">
+              <Download size={18} /> Export Data
+            </button>
+          </div>
+
           <table className="w-full text-left">
             <thead>
-              <tr className="text-[10px] text-gray-400 font-bold uppercase tracking-widest border-b border-gray-50">
-                <th className="py-5 px-4 font-semibold">Nama Tagihan</th>
-                <th className="py-5 px-4 font-semibold">Total Tagihan</th>
-                <th className="py-5 px-4 font-semibold">Total Terbayar</th>
-                <th className="py-5 px-4 font-semibold text-center">Sisa Tagihan</th>
-                <th className="py-5 px-4 text-center font-semibold">Status</th>
+              <tr className="text-[10px] text-gray-400 font-bold  tracking-widest border-b border-gray-50">
+                <th className="py-5 px-4">Nama Tagihan</th>
+                <th className="py-5 px-4">Total Tagihan</th>
+                <th className="py-5 px-4">Total Terbayar</th>
+                <th className="py-5 px-4 text-center">Sisa Tagihan</th>
+                <th className="py-5 px-4 text-center">Status</th>
+                <th className="py-5 px-4 text-center">Update Terbaru</th>
+                <th className="py-5 px-4 text-center">Riwayat</th>
               </tr>
             </thead>
-            <tbody className="text-xs text-[#3b3b3b]">
-              {daftarTagihanFinal.length > 0 ? (
-                daftarTagihanFinal.map((tagihan: any, idx: number) => (
+            <tbody className="text-[11px] text-[#3b3b3b]">
+              {filteredTagihan.length > 0 ? (
+                filteredTagihan.map((tagihan: any, idx: number) => (
                   <tr key={idx} className="border-b border-gray-50 hover:bg-gray-50/50 transition-all">
-                    <td className="py-5 px-4 font-bold text-gray-700">{tagihan.nama}</td>
-                    <td className="py-5 px-4 font-medium text-gray-400">{formatIDR(tagihan.total)}</td>
-                    <td className="py-5 px-4 text-green-600 font-bold">{formatIDR(tagihan.terbayar)}</td>
-                    <td className="py-5 px-4 text-red-600 text-center font-bold">{formatIDR(tagihan.sisa)}</td>
+                    <td className="py-5 px-4 font-medium text-gray-700">{tagihan.nama}</td>
+                    <td className="py-5 px-4 font-medium text-gray-400 uppercase tracking-tight">{formatIDR(tagihan.total)}</td>
+                    <td className="py-5 px-4 text-green-600 font-bold uppercase tracking-tight">{formatIDR(tagihan.terbayar)}</td>
+                    <td className="py-5 px-4 text-red-600 text-center font-bold uppercase tracking-tight">{formatIDR(tagihan.sisa)}</td>
                     <td className="py-5 px-4 text-center">
-                      <span className={`px-3 py-1 rounded-full text-[9px] font-bold uppercase whitespace-nowrap ${tagihan.lunas ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
-                        {tagihan.lunas ? 'Lunas' : 'Belum Lunas'}
-                      </span>
+                      {tagihan.isPending ? (
+                        <span className="px-3 py-1 rounded-full text-[9px] font-bold uppercase bg-yellow-50 text-yellow-600 whitespace-nowrap">
+                          Menunggu Verifikasi
+                        </span>
+                      ) : (
+                        <span className={`px-3 py-1 rounded-full text-[9px] font-bold uppercase whitespace-nowrap ${tagihan.lunas ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+                          {tagihan.lunas ? 'Lunas' : 'Belum Lunas'}
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-5 px-4 text-center text-gray-400 font-medium">
+                      {tagihan.updateTerbaru ? new Date(tagihan.updateTerbaru).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : "-"}
+                    </td>
+                    <td className="py-5 px-4 text-center">
+                      <button 
+                        onClick={() => router.push(`/client/admin/pembayaran/riwayat/${s?.id_pendaftar}?tagihan=${tagihan.id_jenis}`)}
+                        className="p-2 hover:bg-green-50 rounded-full transition-all text-green-600 cursor-pointer"
+                      >
+                        <Info size={18} />
+                      </button>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5} className="py-20 text-center text-gray-400 font-medium">Tidak ada data tagihan.</td>
+                  <td colSpan={7} className="py-20 text-center text-gray-400 font-medium">Tidak ada data tagihan yang sesuai.</td>
                 </tr>
               )}
             </tbody>
@@ -225,7 +291,6 @@ export default function DetailCalonSiswaPage() {
 }
 
 // --- Sub-Components ---
-
 function InfoItem({ label, value }: { label: string, value: any }) {
   return (
     <div className="flex flex-col gap-1">
