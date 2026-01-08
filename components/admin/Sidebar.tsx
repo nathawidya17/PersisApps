@@ -1,6 +1,6 @@
 "use client";
 import React from 'react';
-import { LayoutDashboard, Users, GraduationCap } from 'lucide-react';
+import { LayoutDashboard, Users, GraduationCap, BanknoteArrowUp,Settings, SquarePlus, UserRoundPlus } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import Image from 'next/image';
@@ -9,6 +9,8 @@ const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/client/admin/dashboard' },
   { icon: Users, label: 'Daftar Siswa', href: '/client/admin/DaftarSiswa' },
   { icon: GraduationCap, label: 'PPDB', href: '/client/admin/PPDB' },
+  { icon: BanknoteArrowUp, label: 'Pembayaran', href: '/client/admin/pembayaran' },
+  { icon: SquarePlus, label: 'Tambah Data Tagihan', href: '/client/admin/tambahData/tambahDataTagihan' },
 ];
 
 export default function Sidebar() {
@@ -42,12 +44,6 @@ export default function Sidebar() {
         {menuItems.map((item) => {
             // Logic isActive yang diperbarui:
             let isActive = pathname.startsWith(item.href);
-
-            // Tambahan: Jika sedang di halaman pembayaran/riwayat, nyalakan menu PPDB
-            if (item.label === 'PPDB' && pathname.includes('/admin/pembayaran')) {
-              isActive = true;
-            }
-            
             return (
             <Link
               key={item.label}

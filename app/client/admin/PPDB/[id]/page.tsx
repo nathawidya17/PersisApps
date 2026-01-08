@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import axios from "axios";
 import { 
   ChevronLeft, CheckCircle, Info, Gift, 
-  Search, Filter, Download 
+  Search, Filter, Download, X, Loader2, Check, AlertCircle
 } from "lucide-react";
 
 export default function DetailCalonSiswaPage() {
@@ -22,29 +22,64 @@ export default function DetailCalonSiswaPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
 
-  useEffect(() => {
+  // --- STATE VALIDASI & NOTIFIKASI ---
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
+  const [notification, setNotification] = useState<{message: string, type: 'success' | 'error'} | null>(null);
+
+  const fetchData = async () => {
     if (id && id !== "undefined") {
-      const fetchDetail = async () => {
-        try {
-          setLoading(true);
-          const res = await axios.get(`/server/api/admin/PPDB/${id}`);
-          setData(res.data);
-          setError("");
-        } catch (err: any) {
-          setError(err.response?.data?.error || "Gagal memuat data siswa");
-        } finally {
-          setLoading(false);
-        }
-      };
-      fetchDetail();
+      try {
+        setLoading(true);
+        const res = await axios.get(`/server/api/admin/PPDB/${id}`);
+        setData(res.data);
+        setError("");
+      } catch (err: any) {
+        setError(err.response?.data?.error || "Gagal memuat data siswa");
+      } finally {
+        setLoading(false);
+      }
     }
+  };
+
+  useEffect(() => {
+    fetchData();
   }, [id]);
+
+  // --- HANDLER VALIDASI ---
+  const handleValidation = async () => {
+    setIsValidating(true);
+    try {
+      const res = await axios.post(`/server/api/admin/PPDB/${id}/validasi`, { 
+        id_pendaftar: data?.detail?.id_pendaftar 
+      });
+      
+      setNotification({ message: res.data.message, type: 'success' });
+      setShowConfirm(false);
+      await fetchData(); 
+    } catch (err: any) {
+      setNotification({ 
+        message: err.response?.data?.error || "Terjadi kesalahan sistem", 
+        type: 'error' 
+      });
+    } finally {
+      setIsValidating(false);
+      setTimeout(() => setNotification(null), 3000);
+    }
+  };
 
   if (loading) return <div className="ml-64 p-10 text-gray-400 font-medium text-center">Memuat Detail...</div>;
   if (error) return <div className="ml-64 p-10 text-red-500 text-center">{error}</div>;
 
   const s = data?.detail;
   const isDaftarUlang = data?.status_tahap === "Daftar Ulang";
+  
+  // Logic Cek Kelayakan Validasi untuk di Modal
+  const isLunasPendaftaran = s?.tb_pembayaran_pendaftaran?.some((p: any) => p.status === 'lunas');
+  const hasDaftarUlangPayment = s?.tb_daftar_ulang?.[0]?.tb_pembayaran_daftar_ulang?.length > 0;
+  
+  // Penentuan apakah tombol validasi boleh ditekan
+  const canValidate = isDaftarUlang ? hasDaftarUlangPayment : isLunasPendaftaran;
 
   const formatIDR = (amount: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -59,7 +94,6 @@ export default function DetailCalonSiswaPage() {
   const riwayatPendaftaran = s?.tb_pembayaran_pendaftaran || [];
   const semuaRiwayatBayar = [...riwayatDaftarUlang, ...riwayatPendaftaran];
 
-  // Logic Perhitungan Tagihan
   const daftarTagihanFinal = masterTagihan.map((jenis: any) => {
     const transaksiTerkait = semuaRiwayatBayar.filter((p: any) => {
       if (p.id_jenis_pembayaran) {
@@ -67,20 +101,15 @@ export default function DetailCalonSiswaPage() {
       }
       return Number(jenis.id_jenis_pembayaran) === 1;
     });
-
     const totalTerbayar = transaksiTerkait
       .filter((p: any) => p.status === "lunas" || p.status === "cicil")
       .reduce((acc: number, curr: any) => acc + (Number(curr.nominal) || 0), 0);
-
     const adaPending = transaksiTerkait.some((p: any) => p.status === "menunggu");
-    
     const updateTerakhir = transaksiTerkait.length > 0 
       ? transaksiTerkait.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())[0].updated_at 
       : s?.updated_at;
-
     const nominalTagihan = Number(jenis.nominal) || 0;
     const sisa = Math.max(0, nominalTagihan - totalTerbayar);
-
     return {
       id_jenis: jenis.id_jenis_pembayaran,
       nama: jenis.nama_pembayaran,
@@ -93,12 +122,9 @@ export default function DetailCalonSiswaPage() {
     };
   });
 
-  // Filter & Search Logic
   const filteredTagihan = daftarTagihanFinal.filter((t: any) => {
     const matchSearch = t.nama.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchFilter = filterStatus === "all" 
-      ? true 
-      : filterStatus === "lunas" ? t.lunas : !t.lunas;
+    const matchFilter = filterStatus === "all" ? true : filterStatus === "lunas" ? t.lunas : !t.lunas;
     return matchSearch && matchFilter;
   });
 
@@ -108,20 +134,36 @@ export default function DetailCalonSiswaPage() {
   const statusLunasGlobal = grandTotalTagihan > 0 && grandSisaTagihan === 0;
 
   return (
-    <div className="ml-64 bg-gray-100 min-h-screen pb-10 px-5 pt-5 antialiased font-sans">
+    <div className="ml-64 bg-gray-100 min-h-screen pb-10 px-5 pt-5 antialiased font-sans relative">
+      
+      {/* NOTIFIKASI TOAST */}
+      {notification && (
+        <div className="fixed top-24 left-64 right-0 z-[10001] flex justify-center pointer-events-none animate-in fade-in slide-in-from-right duration-500">
+          <div className={`flex items-center gap-3 px-4 py-4 rounded-xl  shadow-2xl border bg-white pointer-events-auto ${notification.type === 'success' ? 'border-green-100' : 'border-red-100'}`}>
+            <div className={notification.type === 'success' ? 'text-green-600' : 'text-red-600'}>
+              {notification.type === 'success' ? <Check size={16} strokeWidth={4} /> : <X size={16} strokeWidth={4} />}
+            </div>
+            <p className="text-[12px] font-bold text-gray-700 whitespace-nowrap tracking-tight">{notification.message}</p>
+            <div className="w-[1px] h-3 bg-gray-200 ml-1"></div>
+            <button onClick={() => setNotification(null)} className="text-gray-400 hover:text-gray-600 cursor-pointer p-0.5"><X size={14} /></button>
+          </div>
+        </div>
+      )}
+
       {/* Header & Breadcrumb */}
       <div className="flex flex-col mb-5">
-        <p className="text-[10px] text-gray-400 mb-2 tracking-widest">
-          PPDB / <span className="text-green-600">Detail Calon Siswa</span>
-        </p>
+        <p className="text-[10px] text-gray-400 mb-2 tracking-widest">PPDB / <span className="text-green-600">Detail Calon Siswa</span></p>
         <div className="flex items-center justify-between">
           <button onClick={() => router.back()} className="flex items-center gap-2 text-gray-800 hover:opacity-70 transition-all cursor-pointer">
             <ChevronLeft size={20} className="text-gray-700" />
             <h2 className="text-xl font-bold tracking-tight">Detail Calon Siswa</h2>
           </button>
           <div className="flex gap-3">
-            <button className="px-5 py-2.5 bg-[#5BA47E] text-white rounded-[8px] text-sm font-semibold flex items-center gap-2 shadow-sm transition-all hover:bg-[#4a8a68] cursor-pointer">
-              <CheckCircle size={18} /> Validasi Calon Siswa
+            <button 
+              onClick={() => setShowConfirm(true)}
+              className="px-5 py-2.5 bg-[#5BA47E] text-white rounded-[8px] text-sm font-semibold flex items-center gap-2 shadow-sm transition-all hover:bg-[#4a8a68] cursor-pointer"
+            >
+              <CheckCircle size={18} /> {isDaftarUlang ? "Validasi Siswa" : "Validasi Calon Siswa"}
             </button>
             <button className="px-5 py-2.5 bg-white border border-gray-200 text-green-600 rounded-[8px] text-sm font-semibold flex items-center gap-2 transition-all hover:bg-green-50 cursor-pointer">
               <Gift size={18} /> Beri Keringanan
@@ -130,13 +172,66 @@ export default function DetailCalonSiswaPage() {
         </div>
       </div>
 
+      {/* MODAL KONFIRMASI VALIDASI DENGAN PESAN PERINGATAN PEMBAYARAN */}
+      {showConfirm && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-in fade-in" onClick={() => setShowConfirm(false)}></div>
+          <div className="relative bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 animate-in zoom-in text-center">
+            
+            {/* Tampilan Icon Berdasarkan Kelayakan */}
+            <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-4 ${canValidate ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+              {canValidate ? <CheckCircle size={32} /> : <AlertCircle size={32} />}
+            </div>
+
+            <h3 className="text-lg font-bold mb-2">
+              {canValidate ? 'Konfirmasi Validasi' : 'Validasi Gagal'}
+            </h3>
+
+            {/* Area Pesan Error / Informasi di dalam Modal */}
+            {!canValidate ? (
+               <div className="bg-red-50 border border-red-100 p-3 rounded-xl mb-6">
+                 <p className="text-[11px] text-red-600 font-semibold leading-relaxed">
+                   {isDaftarUlang 
+                     ? "Siswa tersebut belum melakukan pembayaran daftar ulang, silahkan lakukan approval terlebih dahulu jika siswa tersebut sudah melakukan pembayaran." 
+                     : "Siswa tersebut belum melakukan pembayaran pendaftaran, atau silahkan lakukan approval terlebih dahulu jika siswa tersebut sudah melakukan pembayaran."}
+                 </p>
+               </div>
+            ) : (
+              <p className="text-sm text-gray-500 mb-6 leading-relaxed">
+                Apakah Anda yakin ingin memvalidasi <b>{s?.nama_lengkap}</b> menjadi 
+                {isDaftarUlang ? " Siswa Tetap?" : " status Daftar Ulang?"}
+              </p>
+            )}
+
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setShowConfirm(false)} 
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-all cursor-pointer"
+              >
+                {canValidate ? "Batal" : "Tutup"}
+              </button>
+              
+              {canValidate && (
+                <button 
+                  onClick={handleValidation} 
+                  disabled={isValidating}
+                  className="flex-1 py-2.5 rounded-xl bg-[#068A50] text-white text-sm font-semibold shadow-lg active:scale-95 flex justify-center items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {isValidating ? <Loader2 className="animate-spin" size={16}/> : "Ya, Lanjutkan"}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Info Cards Utama */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
         <div className="lg:col-span-2 bg-white p-8 rounded-[12px] shadow-sm border border-gray-100">
-          <div className="mb-8">
+          <div className="mb-8 text-left">
              <h3 className="text-2xl font-bold text-gray-900 tracking-tight">{s?.nama_lengkap}</h3>
              <div className="flex items-center gap-2 mt-1">
-                <span className="text-xs text-gray-400 uppercase tracking-widest">{s?.email || "siswa@persis.com"}</span>
+                <span className="text-xs text-gray-400 tracking-widest">{s?.email || "siswa@persis.com"}</span>
                 <span className={`px-2 py-0.5 text-[10px] font-bold rounded uppercase ${isDaftarUlang ? "bg-green-50 text-green-600" : "bg-yellow-50 text-yellow-600"}`}>
                   {data?.status_tahap}
                 </span>
@@ -153,10 +248,9 @@ export default function DetailCalonSiswaPage() {
             <InfoItem label="Alamat" value={s?.alamat_rumah} />
           </div>
         </div>
-
         <div className="bg-white p-8 rounded-[12px] shadow-sm border border-gray-100">
-          <h3 className="text-2xl font-bold text-gray-900 tracking-tight ">NISN</h3>
-          <p className="text-[13px] font-bold text-gray-300 mb-10">{s?.nisn}</p>
+          <h3 className="text-2xl font-bold text-gray-900 tracking-tight text-left">NISN</h3>
+          <p className="text-[13px] font-bold text-gray-300 mb-10 text-left">{s?.nisn}</p>
           <div className="grid grid-cols-2 gap-y-8">
             <InfoItem label="Status Siswa" value={<span className="text-green-600 font-bold capitalize">{s?.tipe_siswa}</span>} />
             <InfoItem label="Asal Sekolah" value={s?.asal_sekolah} />
@@ -168,73 +262,53 @@ export default function DetailCalonSiswaPage() {
 
       {/* Parent Data */}
       <div className="bg-white p-8 rounded-[12px] shadow-sm border border-gray-100 mb-5">
-        <h3 className="text-[15px] font-bold text-gray-900 mb-8 tracking-tight uppercase tracking-widest">Data Orang Tua</h3>
+        <h3 className="text-[15px] font-bold text-gray-900 mb-8 tracking-tight uppercase tracking-widest text-left">Data Orang Tua</h3>
         <div className="grid grid-cols-5 gap-y-10 gap-x-4">
           <InfoItem label="Nama Ayah" value={s?.nama_ayah} />
           <InfoItem label="Lahir Ayah" value={`${s?.tempat_lahir_ayah || '-'}, ${s?.tanggal_lahir_ayah?.split('T')[0] || '-'}`} />
           <InfoItem label="Pendidikan" value={s?.pendidikan_ayah} />
           <InfoItem label="Pekerjaan" value={s?.pekerjaan_ayah} />
           <InfoItem label="Penghasilan" value={s?.penghasilan_ayah} />
-
           <InfoItem label="Nama Ibu" value={s?.nama_ibu} />
           <InfoItem label="Lahir Ibu" value={`${s?.tempat_lahir_ibu || '-'}, ${s?.tanggal_lahir_ibu?.split('T')[0] || '-'}`} />
           <InfoItem label="Pendidikan" value={s?.pendidikan_ibu} />
           <InfoItem label="Pekerjaan" value={s?.pekerjaan_ibu} />
           <InfoItem label="Penghasilan" value={s?.penghasilan_ibu} />
-
           <InfoItem label="No Hp Ortu" value={s?.no_hp_orang_tua} />
-          <div className="col-span-4">
-             <InfoItem label="Alamat" value={s?.alamat_rumah} />
-          </div>
+          <div className="col-span-4"><InfoItem label="Alamat" value={s?.alamat_rumah} /></div>
         </div>
       </div>
 
-      {/* Tab & Table Section */}
+      {/* Tab Section */}
       <div className="bg-white rounded-[12px] shadow-sm border border-gray-100 overflow-hidden">
         <div className="flex border-b border-gray-100 px-2">
           <TabButton active={activeTab === "tagihan"} onClick={() => setActiveTab("tagihan")} label="Daftar Tagihan" />
           <TabButton active={activeTab === "dokumen"} onClick={() => setActiveTab("dokumen")} label="Dokumen" />
           <TabButton active={activeTab === "prestasi"} onClick={() => setActiveTab("prestasi")} label="Prestasi" />
         </div>
-
         <div className="p-8">
           <div className="grid grid-cols-4 gap-5 mb-8">
             <SummaryCard label="Total Tagihan" value={formatIDR(grandTotalTagihan)} />
             <SummaryCard label="Total Terbayar" value={formatIDR(grandTotalTerbayar)} className="text-green-600" />
             <SummaryCard label="Sisa Tagihan" value={formatIDR(grandSisaTagihan)} className="text-red-600" />
-            <div className={`p-5 rounded-[12px] border flex flex-col gap-1 ${statusLunasGlobal ? "border-green-100 bg-green-50/30" : "border-red-100 bg-red-50/30"}`}>
+            <div className={`p-5 rounded-[12px] border flex flex-col gap-1 text-left ${statusLunasGlobal ? "border-green-100 bg-green-50/30" : "border-red-100 bg-red-50/30"}`}>
                <p className={`text-[10px] font-bold uppercase tracking-widest ${statusLunasGlobal ? "text-green-400" : "text-red-400"}`}>Status Pembayaran</p>
-               <p className={`text-[17px] font-bold ${statusLunasGlobal ? "text-green-600" : "text-red-600"}`}>
-                 {statusLunasGlobal ? "Lunas" : "Belum Lunas"}
-               </p>
+               <p className={`text-[17px] font-bold ${statusLunasGlobal ? "text-green-600" : "text-red-600"}`}>{statusLunasGlobal ? "Lunas" : "Belum Lunas"}</p>
             </div>
           </div>
-
-          {/* TABLE TOOLBAR: SEARCH, FILTER, EXPORT (SESUAI GAMBAR) */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex gap-3 items-center">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
-                <input 
-                  type="text" 
-                  placeholder="Cari....." 
-                  className="pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-[8px] text-sm outline-none focus:border-green-500 transition-all w-64 placeholder:text-gray-300"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
+                <input type="text" placeholder="Cari....." className="pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-[8px] text-sm outline-none w-64" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}/>
               </div>
-              <button className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-[8px] text-gray-400 text-sm font-medium hover:bg-gray-50 transition-all cursor-pointer">
-                <Filter size={18} /> Filter
-              </button>
+              <button className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-[8px] text-gray-400 text-sm hover:bg-gray-50"><Filter size={18} /> Filter</button>
             </div>
-            <button className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-[8px] text-gray-400 text-sm font-medium hover:bg-gray-50 transition-all cursor-pointer">
-              <Download size={18} /> Export Data
-            </button>
+            <button className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-[8px] text-gray-400 text-sm hover:bg-gray-50"><Download size={18} /> Export Data</button>
           </div>
-
           <table className="w-full text-left">
             <thead>
-              <tr className="text-[10px] text-gray-400 font-bold  tracking-widest border-b border-gray-50">
+              <tr className="text-[10px] text-gray-400 font-bold tracking-widest border-b border-gray-50">
                 <th className="py-5 px-4">Nama Tagihan</th>
                 <th className="py-5 px-4">Total Tagihan</th>
                 <th className="py-5 px-4">Total Terbayar</th>
@@ -245,42 +319,19 @@ export default function DetailCalonSiswaPage() {
               </tr>
             </thead>
             <tbody className="text-[11px] text-[#3b3b3b]">
-              {filteredTagihan.length > 0 ? (
-                filteredTagihan.map((tagihan: any, idx: number) => (
-                  <tr key={idx} className="border-b border-gray-50 hover:bg-gray-50/50 transition-all">
-                    <td className="py-5 px-4 font-medium text-gray-700">{tagihan.nama}</td>
-                    <td className="py-5 px-4 font-medium text-gray-400 uppercase tracking-tight">{formatIDR(tagihan.total)}</td>
-                    <td className="py-5 px-4 text-green-600 font-bold uppercase tracking-tight">{formatIDR(tagihan.terbayar)}</td>
-                    <td className="py-5 px-4 text-red-600 text-center font-bold uppercase tracking-tight">{formatIDR(tagihan.sisa)}</td>
-                    <td className="py-5 px-4 text-center">
-                      {tagihan.isPending ? (
-                        <span className="px-3 py-1 rounded-full text-[9px] font-bold uppercase bg-yellow-50 text-yellow-600 whitespace-nowrap">
-                          Menunggu Verifikasi
-                        </span>
-                      ) : (
-                        <span className={`px-3 py-1 rounded-full text-[9px] font-bold uppercase whitespace-nowrap ${tagihan.lunas ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
-                          {tagihan.lunas ? 'Lunas' : 'Belum Lunas'}
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-5 px-4 text-center text-gray-400 font-medium">
-                      {tagihan.updateTerbaru ? new Date(tagihan.updateTerbaru).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : "-"}
-                    </td>
-                    <td className="py-5 px-4 text-center">
-                      <button 
-                        onClick={() => router.push(`/client/admin/pembayaran/riwayat/${s?.id_pendaftar}?tagihan=${tagihan.id_jenis}`)}
-                        className="p-2 hover:bg-green-50 rounded-full transition-all text-green-600 cursor-pointer"
-                      >
-                        <Info size={18} />
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={7} className="py-20 text-center text-gray-400 font-medium">Tidak ada data tagihan yang sesuai.</td>
+              {filteredTagihan.map((tagihan: any, idx: number) => (
+                <tr key={idx} className="border-b border-gray-50 hover:bg-gray-50/50">
+                  <td className="py-5 px-4 font-medium text-gray-700">{tagihan.nama}</td>
+                  <td className="py-5 px-4 font-medium text-gray-400">{formatIDR(tagihan.total)}</td>
+                  <td className="py-5 px-4 text-green-600 font-bold">{formatIDR(tagihan.terbayar)}</td>
+                  <td className="py-5 px-4 text-red-600 text-center font-bold">{formatIDR(tagihan.sisa)}</td>
+                  <td className="py-5 px-4 text-center">
+                    {tagihan.isPending ? <span className="px-3 py-1 rounded-full text-[9px] font-bold uppercase bg-yellow-50 text-yellow-600 whitespace-nowrap">Menunggu Verifikasi</span> : <span className={`px-3 py-1 rounded-full text-[9px] font-bold uppercase whitespace-nowrap ${tagihan.lunas ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>{tagihan.lunas ? 'Lunas' : 'Belum Lunas'}</span>}
+                  </td>
+                  <td className="py-5 px-4 text-center text-gray-400 font-medium">{tagihan.updateTerbaru ? new Date(tagihan.updateTerbaru).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : "-"}</td>
+                  <td className="py-5 px-4 text-center"><button onClick={() => router.push(`/client/admin/PPDB/riwayat-pembayaran/${s?.id_pendaftar}?tagihan=${tagihan.id_jenis}`)} className="p-2 hover:bg-green-50 rounded-full text-green-600 cursor-pointer"><Info size={18} /></button></td>
                 </tr>
-              )}
+              ))}
             </tbody>
           </table>
         </div>
@@ -293,7 +344,7 @@ export default function DetailCalonSiswaPage() {
 // --- Sub-Components ---
 function InfoItem({ label, value }: { label: string, value: any }) {
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1 text-left">
       <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{label}</span>
       <span className="text-[12px] font-semibold text-gray-700 leading-tight">{value || "-"}</span>
     </div>
@@ -302,20 +353,13 @@ function InfoItem({ label, value }: { label: string, value: any }) {
 
 function TabButton({ active, label, onClick }: any) {
   return (
-    <button 
-      onClick={onClick} 
-      className={`px-8 py-5 text-[12px] font-bold transition-all border-b-2 cursor-pointer ${
-        active ? 'border-[#068A50] text-[#068A50]' : 'border-transparent text-gray-400'
-      }`}
-    >
-      {label}
-    </button>
+    <button onClick={onClick} className={`px-8 py-5 text-[12px] font-bold transition-all border-b-2 cursor-pointer ${active ? 'border-[#068A50] text-[#068A50]' : 'border-transparent text-gray-400'}`}>{label}</button>
   );
 }
 
 function SummaryCard({ label, value, className = "" }: any) {
   return (
-    <div className="p-5 rounded-[12px] border border-gray-100 bg-white shadow-sm flex flex-col gap-1">
+    <div className="p-5 rounded-[12px] border border-gray-100 bg-white shadow-sm flex flex-col gap-1 text-left">
       <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{label}</p>
       <p className={`text-[17px] font-bold tracking-tight ${className || "text-gray-800"}`}>{value}</p>
     </div>

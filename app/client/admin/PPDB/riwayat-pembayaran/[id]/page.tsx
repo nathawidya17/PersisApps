@@ -30,7 +30,7 @@ export default function RiwayatTransaksiTagihanPage() {
       try {
         setLoading(true);
         // Memanggil API Route Backend
-        const res = await axios.get(`/server/api/admin/pembayaran/riwayat/${id_pendaftar}?tagihan=${id_jenis}`);
+        const res = await axios.get(`/server/api/admin/PPDB/riwayat-pembayaran/${id_pendaftar}?tagihan=${id_jenis}`);
         setData(res.data);
       } catch (err) {
         console.error("Gagal memuat riwayat", err);
@@ -143,7 +143,7 @@ export default function RiwayatTransaksiTagihanPage() {
                     {item.status === 'menunggu' ? 'Need Approval' : 'Approved'}
                   </span>
                 </td>
-                <td className="px-8 py-5 font-medium">{item.status === 'menunggu' ? '-' : (item.approved_by || 'Admin')}</td>
+                <td className="px-8 py-5 font-medium">{item.status === 'menunggu' ? '-' : (item.approved_by)}</td>
                 <td className="px-8 py-5 text-gray-400 font-medium uppercase text-[10px]">
                   {new Date(item.created_at).toLocaleString('id-ID', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'})}
                 </td>

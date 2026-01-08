@@ -133,10 +133,11 @@ model tb_users {
   id_user    Int           @id @default(autoincrement())
   nama       String        @db.VarChar(250)
   email      String        @unique(map: "unique_email") @db.VarChar(250)
+  password   String        @db.VarChar(255)
   no_telp    String        @db.VarChar(15)
   role       tb_users_role
   created_at DateTime      @default(now()) @db.Timestamp(0)
-  update_at  DateTime      @default(dbgenerated("('0000-00-00 00:00:00')")) @db.Timestamp(0)
+  update_at  DateTime      @default(now()) @db.Timestamp(0)
 }
 
 model tb_daftar_ulang {
@@ -170,6 +171,7 @@ model tb_pembayaran_daftar_ulang {
   tanggal_bayar              DateTime?                                    @db.Date
   metode_pembayaran          tb_pembayaran_daftar_ulang_metode_pembayaran
   status                     tb_pembayaran_daftar_ulang_status?           @default(belum)
+  approved_by                String?                                      @db.VarChar(255)
   bukti_pembayaran           String?                                      @db.VarChar(255)
   created_at                 DateTime                                     @default(now()) @db.Timestamp(0)
   updated_at                 DateTime                                     @default(now()) @db.Timestamp(0)
@@ -189,6 +191,7 @@ model tb_pembayaran_pendaftaran {
   tanggal_bayar        DateTime?                                    @default(dbgenerated("(curdate())")) @db.Date
   metode_pembayaran    tb_pembayaran_pendaftaran_metode_pembayaran? @default(cash)
   status               tb_pembayaran_pendaftaran_status?            @default(belum)
+  approved_by          String?                                      @db.VarChar(255)
   bukti_pembayaran     String?                                      @db.VarChar(255)
   created_at           DateTime                                     @default(now()) @db.Timestamp(0)
   updated_at           DateTime                                     @default(now()) @db.Timestamp(0)

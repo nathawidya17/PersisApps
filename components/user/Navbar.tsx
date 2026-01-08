@@ -31,7 +31,9 @@ const Navbar = () => {
     '/client/user/persyaratanPPDB', 
     '/client/user/form-pendaftaran',
     '/client/user/daftar-ulang', 
-    '/client/user/cek-tagihan'
+    '/client/user/cek-tagihan',
+    '/client/user/success',
+
   ].some(path => pathname.includes(path));
 
   return (
