@@ -3,7 +3,19 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Navbar from '@/components/user/Navbar';
 import Footer from '@/components/user/Footer';
-import { Mail, Phone, MapPin, Check, Copy, Upload, ChevronDown, Plus, Trash2, Info } from 'lucide-react';
+import { Mail, Phone, MapPin, Check, Copy, Upload, ChevronDown, Plus, Trash2, Info, CalendarIcon } from 'lucide-react';
+
+// IMPORTS SHADCN & DATE UTILS
+import { format } from "date-fns";
+import { id } from "date-fns/locale"; // Locale Indonesia
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 // KONFIGURASI PEMBAYARAN DARI ENV
 const PAYMENT_CONFIG = {
@@ -28,7 +40,7 @@ export default function RegistrationForm() {
     nama_ayah: "", tempat_lahir_ayah: "", tanggal_lahir_ayah: "", pendidikan_ayah: "", pekerjaan_ayah: "", penghasilan_ayah: "",
     nama_ibu: "", tempat_lahir_ibu: "", tanggal_lahir_ibu: "", pendidikan_ibu: "", pekerjaan_ibu: "", penghasilan_ibu: "",
     alamat_ortu: "", rt_ortu: "", rw_ortu: "", kodepos_ortu: "", no_hp_ortu: "",
-    no_hp_orang_tua: "", jumlah_dibayar: PAYMENT_CONFIG.amountPendaftaran, // Default isi dengan harga pendaftaran
+    no_hp_orang_tua: "", jumlah_dibayar: PAYMENT_CONFIG.amountPendaftaran, 
     bukti_pembayaran: null as File | null
   });
 
@@ -36,6 +48,7 @@ export default function RegistrationForm() {
     nama: "", jenis_prestasi: "", tingkat: "", peringkat: "", tahun: "" , penyelenggara: ""
   }]);
 
+  // Load saved jalur from local storage
   useEffect(() => {
     const savedJalur = localStorage.getItem('pendaftaran_jalur');
     if (savedJalur) {
@@ -44,10 +57,84 @@ export default function RegistrationForm() {
     }
   }, []);
 
+  // --- AUTO SCROLL KE ATAS SETIAP GANTI STEP ---
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [step]);
+
   const isPrestasi = formData.jalur_pendaftaran === "Prestasi";
-  const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
-  const nextStep = () => { if (isStepValid()) { setStep(step + 1); scrollToTop(); } };
-  const prevStep = () => { setStep(step - 1); scrollToTop(); };
+
+  // --- HELPER VALIDASI TAHUN ---
+  const currentYear = new Date().getFullYear();
+
+  const isYearValid = (dateString: string, isFullDate: boolean = false) => {
+    if (!dateString) return true;
+    let year;
+    if (isFullDate) {
+      // Format YYYY-MM-DD
+      year = parseInt(dateString.split('-')[0]);
+    } else {
+      // Format YYYY
+      year = parseInt(dateString);
+    }
+    return year <= currentYear;
+  };
+
+  const validateYearLogic = () => {
+    // Validasi Step 1: Tanggal Lahir Siswa
+    if (step === 1) {
+      if (!isYearValid(formData.tanggal_lahir, true)) {
+        alert("Tanggal lahir siswa tidak boleh melebihi tahun saat ini.");
+        return false;
+      }
+    }
+
+    // Validasi Step 2: Tahun Lulus
+    if (step === 2) {
+      if (!isYearValid(formData.tahun_lulus)) {
+        alert(`Tahun lulus tidak boleh melebihi tahun saat ini (${currentYear}).`);
+        return false;
+      }
+    }
+
+    // Validasi Step 3 (Khusus Prestasi): Tahun Prestasi
+    if (isPrestasi && step === 3) {
+      for (let i = 0; i < prestasiList.length; i++) {
+        if (!isYearValid(prestasiList[i].tahun)) {
+          alert(`Tahun prestasi pada baris ke-${i + 1} tidak boleh melebihi tahun saat ini.`);
+          return false;
+        }
+      }
+    }
+
+    // Validasi Data Orang Tua: Tanggal Lahir Ayah & Ibu
+    const stepOrangTua = isPrestasi ? 4 : 3;
+    if (step === stepOrangTua) {
+      if (!isYearValid(formData.tanggal_lahir_ayah, true)) {
+        alert("Tanggal lahir Ayah tidak boleh melebihi tahun saat ini.");
+        return false;
+      }
+      if (!isYearValid(formData.tanggal_lahir_ibu, true)) {
+        alert("Tanggal lahir Ibu tidak boleh melebihi tahun saat ini.");
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  const nextStep = () => { 
+    if (!isStepValid()) return;
+    if (validateYearLogic()) {
+      setStep(step + 1); 
+      // Tidak perlu panggil scrollToTop() manual lagi karena sudah di-handle useEffect
+    }
+  };
+
+  const prevStep = () => { 
+    setStep(step - 1); 
+    // Tidak perlu panggil scrollToTop() manual lagi karena sudah di-handle useEffect
+  };
 
   const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -57,6 +144,16 @@ export default function RegistrationForm() {
   const handleChange = (e: any) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  // Handle khusus DatePicker untuk mengubah state string YYYY-MM-DD
+  const handleDateChange = (name: string, date: Date | undefined) => {
+    if (date) {
+      const formatted = format(date, "yyyy-MM-dd");
+      setFormData(prev => ({ ...prev, [name]: formatted }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: "" }));
+    }
   };
 
   const handleCopy = (text: string) => {
@@ -80,6 +177,7 @@ export default function RegistrationForm() {
   };
 
  const handleSubmit = async () => {
+    if (!validateYearLogic()) return;
     setIsSubmitting(true);
     try {
       const data = new FormData();
@@ -120,20 +218,12 @@ export default function RegistrationForm() {
   };
 
   const isStepValid = () => {
-    if (step === 1) return formData.nama_lengkap && formData.no_hp && formData.email && formData.jalur_pendaftaran;
-    if (step === 2) return formData.nisn && formData.asal_sekolah;
-    if (isPrestasi && step === 3) return prestasiList[0].nama !== "";
+    if (step === 1) return formData.jalur_pendaftaran && formData.nama_lengkap && formData.jenis_kelamin && formData.tempat_lahir && formData.tanggal_lahir && formData.anak_ke && formData.jumlah_saudara && formData.no_hp && formData.email && formData.alamat_rumah && formData.rt && formData.rw && formData.kode_pos && formData.ukuran_baju;
+    if (step === 2) return formData.nisn && formData.asal_sekolah && formData.alamat_sekolah && formData.tahun_lulus && formData.kode_pos_sekolah;
+    if (isPrestasi && step === 3) return prestasiList.every(item => item.nama && item.jenis_prestasi && item.tingkat && item.peringkat && item.tahun && item.penyelenggara);
     const stepOrangTua = isPrestasi ? 4 : 3;
-    if (step === stepOrangTua) return formData.nama_ayah && formData.nama_ibu;
-    
-    // Validasi Step Pembayaran
-    if (step === (isPrestasi ? 5 : 4)) {
-      if (paymentMethod === "Cash") {
-        return formData.jumlah_dibayar !== ""; // Cash hanya butuh input nominal
-      } else {
-        return formData.jumlah_dibayar !== "" && formData.bukti_pembayaran !== null; // Transfer butuh bukti
-      }
-    }
+    if (step === stepOrangTua) return formData.nama_ayah && formData.tempat_lahir_ayah && formData.tanggal_lahir_ayah && formData.pekerjaan_ayah && formData.pendidikan_ayah && formData.penghasilan_ayah && formData.nama_ibu && formData.tempat_lahir_ibu && formData.tanggal_lahir_ibu && formData.pekerjaan_ibu && formData.pendidikan_ibu && formData.penghasilan_ibu && formData.no_hp_orang_tua;
+    if (step === (isPrestasi ? 5 : 4)) return paymentMethod === "Cash" ? formData.jumlah_dibayar !== "" : (formData.jumlah_dibayar !== "" && formData.bukti_pembayaran !== null);
     return true; 
   };
 
@@ -180,7 +270,8 @@ export default function RegistrationForm() {
               </div>
 
               <div className="p-8 flex-grow">
-                {/* STEP 1 - 3 (Sama seperti sebelumnya) */}
+                
+                {/* STEP 1: DATA SISWA */}
                 {step === 1 && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in duration-300">
                     <div className="md:col-span-2">
@@ -189,7 +280,16 @@ export default function RegistrationForm() {
                     <InputGroup label="Nama Siswa" name="nama_lengkap" value={formData.nama_lengkap} onChange={handleChange} placeholder="Nama lengkap" />
                     <SelectGroup label="Jenis Kelamin" name="jenis_kelamin" value={formData.jenis_kelamin} onChange={handleChange} options={["Putra", "Putri"]} />
                     <InputGroup label="Tempat Lahir" name="tempat_lahir" value={formData.tempat_lahir} onChange={handleChange} placeholder="Contoh: Garut" />
-                    <InputGroup label="Tanggal Lahir" name="tanggal_lahir" type="date" value={formData.tanggal_lahir} onChange={handleChange} placeholder="DD/MM/YYYY" />
+                    
+                    {/* GANTI TANGGAL LAHIR DENGAN DATE PICKER */}
+                    <DatePickerGroup 
+                      label="Tanggal Lahir" 
+                      name="tanggal_lahir" 
+                      value={formData.tanggal_lahir} 
+                      onChange={(date: Date | undefined) => handleDateChange("tanggal_lahir", date)} 
+                      placeholder="Pilih Tanggal Lahir"
+                    />
+
                     <InputGroup label="Anak Ke" name="anak_ke" value={formData.anak_ke} onChange={handleNumberChange} placeholder="Contoh: 1" />
                     <InputGroup label="Jumlah Saudara" name="jumlah_saudara" value={formData.jumlah_saudara} onChange={handleNumberChange} placeholder="0" />
                     <InputGroup label="No HP (WA)" name="no_hp" value={formData.no_hp} onChange={handleNumberChange} placeholder="08xxxxxxxx" maxLength={14} />
@@ -202,6 +302,7 @@ export default function RegistrationForm() {
                   </div>
                 )}
 
+                {/* STEP 2: SEKOLAH ASAL */}
                 {step === 2 && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in duration-300">
                     <InputGroup label="NISN" name="nisn" value={formData.nisn} onChange={handleNumberChange} placeholder="10 Digit NISN" maxLength={10} />
@@ -212,6 +313,7 @@ export default function RegistrationForm() {
                   </div>
                 )}
 
+                {/* STEP 3: PRESTASI */}
                 {isPrestasi && step === 3 && (
                   <div className="space-y-6 animate-in fade-in duration-300">
                     {prestasiList.map((item, index) => (
@@ -249,12 +351,22 @@ export default function RegistrationForm() {
                   </div>
                 )}
 
+                {/* STEP DATA ORANG TUA */}
                 {step === (isPrestasi ? 4 : 3) && (
                   <div className="space-y-8 animate-in fade-in duration-300">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <InputGroup label="Nama Ayah" name="nama_ayah" value={formData.nama_ayah} onChange={handleChange} placeholder="Ayah" />
                       <InputGroup label="Tempat Lahir" name="tempat_lahir_ayah" value={formData.tempat_lahir_ayah} onChange={handleChange} placeholder="Garut" />
-                      <InputGroup label="Tanggal Lahir" name="tanggal_lahir_ayah" value={formData.tanggal_lahir_ayah} onChange={handleChange} type="date" />
+                      
+                      {/* DATE PICKER AYAH */}
+                      <DatePickerGroup 
+                        label="Tanggal Lahir" 
+                        name="tanggal_lahir_ayah" 
+                        value={formData.tanggal_lahir_ayah} 
+                        onChange={(date: Date | undefined) => handleDateChange("tanggal_lahir_ayah", date)} 
+                        placeholder="Pilih Tanggal Lahir"
+                      />
+
                       <InputGroup label="Pekerjaan" name="pekerjaan_ayah" value={formData.pekerjaan_ayah} onChange={handleChange} placeholder="PNS" />
                       <SelectGroup label="Pendidikan" name="pendidikan_ayah" value={formData.pendidikan_ayah} onChange={handleChange} options={["SD", "SMP", "SMA", "S1","S2","S3"]} />
                     </div>
@@ -263,7 +375,16 @@ export default function RegistrationForm() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <InputGroup label="Nama Ibu" name="nama_ibu" value={formData.nama_ibu} onChange={handleChange} placeholder="Ibu" />
                       <InputGroup label="Tempat Lahir" name="tempat_lahir_ibu" value={formData.tempat_lahir_ibu} onChange={handleChange} placeholder="Garut" />
-                      <InputGroup label="Tanggal Lahir" name="tanggal_lahir_ibu" value={formData.tanggal_lahir_ibu} onChange={handleChange} type="date" />
+                      
+                      {/* DATE PICKER IBU */}
+                      <DatePickerGroup 
+                        label="Tanggal Lahir" 
+                        name="tanggal_lahir_ibu" 
+                        value={formData.tanggal_lahir_ibu} 
+                        onChange={(date: Date | undefined) => handleDateChange("tanggal_lahir_ibu", date)} 
+                        placeholder="Pilih Tanggal Lahir"
+                      />
+
                       <InputGroup label="Pekerjaan" name="pekerjaan_ibu" value={formData.pekerjaan_ibu} onChange={handleChange} placeholder="PNS" />
                       <SelectGroup label="Pendidikan" name="pendidikan_ibu" value={formData.pendidikan_ibu} onChange={handleChange} options={["SD", "SMP", "SMA", "S1","S2","S3"]} />
                     </div>
@@ -273,7 +394,7 @@ export default function RegistrationForm() {
                   </div>
                 )}
 
-                {/* --- KONFIRMASI PEMBAYARAN (FIX UNTUK CASH & TRANSFER) --- */}
+                {/* STEP KONFIRMASI PEMBAYARAN */}
                 {step === (isPrestasi ? 5 : 4) && (
                   <div className="space-y-6 animate-in fade-in duration-300 text-left">
                     <div className="space-y-2">
@@ -291,12 +412,9 @@ export default function RegistrationForm() {
                       </div>
                     </div>
 
-                    {/* Jika Transfer: Tampilkan Info Bank & Nomor Rekening */}
                     {paymentMethod === "Transfer" && (
                       <div className="space-y-5 animate-in slide-in-from-top-2 duration-300">
-                        
                         <InputReadOnly label="Bank" value={PAYMENT_CONFIG.bank} />
-                        
                         <div className="space-y-2">
                            <label className="text-[13px] font-bold text-gray-700">Nomor Rekening</label>
                            <div className="relative">
@@ -308,8 +426,6 @@ export default function RegistrationForm() {
                       </div>
                     )}
                 
-
-                    {/* Input Jumlah Bayar: Selalu Muncul di Transfer maupun Cash */}
                     <div className="space-y-5">
                         <InputReadOnly label="Jumlah Tagihan Pendaftaran" value={`IDR ${PAYMENT_CONFIG.amountPendaftaran}`} />
                       <InputGroup 
@@ -320,8 +436,6 @@ export default function RegistrationForm() {
                         placeholder={`Contoh: ${PAYMENT_CONFIG.amountPendaftaran}`} 
                       />
                       
-
-                      {/* Info Tambahan Jika Cash */}
                       {paymentMethod === "Cash" && (
                         <div className="p-5 bg-green-50 rounded-xl border border-green-100 flex gap-4 animate-in zoom-in duration-300">
                           <div className="w-10 h-10 bg-[#428E5F] rounded-full flex items-center justify-center shrink-0"><Info className="text-white" size={20} /></div>
@@ -333,7 +447,6 @@ export default function RegistrationForm() {
                       )}
                     </div>
 
-                    {/* Upload Bukti: Hanya Muncul Jika Transfer */}
                     {paymentMethod === "Transfer" && (
                       <div className="space-y-2 animate-in fade-in duration-300">
                         <label className="text-[13px] font-bold text-gray-700">Bukti Pembayaran</label>
@@ -383,7 +496,51 @@ export default function RegistrationForm() {
   );
 }
 
-// COMPONENTS HELPERS
+// --- CUSTOM DATE PICKER COMPONENT (ALA SHADCN) ---
+function DatePickerGroup({ label, value, onChange, placeholder }: any) {
+  const dateValue = value ? new Date(value) : undefined;
+
+  return (
+    <div className="space-y-2 flex flex-col text-left">
+      <label className="text-[13px] font-bold text-gray-700">{label}</label>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant={"outline"}
+            className={cn(
+              "w-full pl-3 text-left font-normal py-6 rounded-lg border-gray-200 hover:bg-gray-50", 
+              !value && "text-muted-foreground"
+            )}
+          >
+            {value ? (
+              format(new Date(value), "PPP", { locale: id })
+            ) : (
+              <span className="text-gray-400">{placeholder}</span>
+            )}
+            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={dateValue}
+            onSelect={onChange}
+            disabled={(date) =>
+              date > new Date() || date < new Date("1900-01-01")
+            }
+            initialFocus
+            locale={id}
+            captionLayout="dropdown" // SUDAH DIPERBAIKI (sebelumnya 'dropdown-buttons')
+            fromYear={1960}
+            toYear={2030}
+          />
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
+// COMPONENTS HELPERS LAINNYA
 function InputReadOnly({ label, value }: any) {
   return (
     <div className="space-y-2 text-left">

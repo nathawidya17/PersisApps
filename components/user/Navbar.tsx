@@ -30,7 +30,7 @@ const Navbar = () => {
   const isDaftarActive = [
     '/client/user/persyaratanPPDB', 
     '/client/user/form-pendaftaran',
-    '/client/user/daftar-ulang', 
+    '/client/user/cek-nisn', 
     '/client/user/cek-tagihan',
     '/client/user/success',
 
@@ -93,8 +93,8 @@ const Navbar = () => {
                 bgIcon="bg-red-50"
                 title="Pendaftaran Ulang PPDB"
                 desc="Lengkapi data untuk daftar ulang siswa."
-                href="/client/user/daftar-ulang"
-                active={pathname === '/client/user/daftar-ulang'}
+                href="/client/user/cek-nisn"
+                active={pathname === '/client/user/cek-nisn'}
                 onClick={() => setIsDropdownOpen(false)}
               />
               <DropdownItem 
