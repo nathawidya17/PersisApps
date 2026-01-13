@@ -3,11 +3,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Navbar from '@/components/user/Navbar';
 import Footer from '@/components/user/Footer';
-import { Mail, Phone, MapPin, Check, Copy, Upload, ChevronDown, Plus, Trash2, Info, CalendarIcon } from 'lucide-react';
+import { Mail, Phone, MapPin, Check, Copy, Upload, ChevronDown, Plus, Trash2, Info, CalendarIcon, Loader2, AlertCircle } from 'lucide-react';
 
 // IMPORTS SHADCN & DATE UTILS
 import { format } from "date-fns";
-import { id } from "date-fns/locale"; // Locale Indonesia
+import { id } from "date-fns/locale"; 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -29,7 +29,15 @@ export default function RegistrationForm() {
   const [step, setStep] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState("Transfer");
   const [showCopyToast, setShowCopyToast] = useState(false);
+  
+  // State Loading & Error
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCheckingNisn, setIsCheckingNisn] = useState(false); 
+  const [nisnError, setNisnError] = useState(""); 
+  
+  // State Error Global
+  const [submitError, setSubmitError] = useState("");
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState({
@@ -48,7 +56,6 @@ export default function RegistrationForm() {
     nama: "", jenis_prestasi: "", tingkat: "", peringkat: "", tahun: "" , penyelenggara: ""
   }]);
 
-  // Load saved jalur from local storage
   useEffect(() => {
     const savedJalur = localStorage.getItem('pendaftaran_jalur');
     if (savedJalur) {
@@ -57,47 +64,46 @@ export default function RegistrationForm() {
     }
   }, []);
 
-  // --- AUTO SCROLL KE ATAS SETIAP GANTI STEP ---
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [step]);
 
   const isPrestasi = formData.jalur_pendaftaran === "Prestasi";
-
-  // --- HELPER VALIDASI TAHUN ---
   const currentYear = new Date().getFullYear();
+
+  // --- LOGIC GENERATE STEP LIST DYNAMICALLY ---
+  const stepList = [
+    { num: 1, label: "Data Siswa" },
+    { num: 2, label: "Data Sekolah" }, // Label dipendekkan untuk mobile
+    ...(isPrestasi ? [{ num: 3, label: "Prestasi" }] : []),
+    { num: isPrestasi ? 4 : 3, label: "Data Ortu" },
+    { num: isPrestasi ? 5 : 4, label: "Konfirmasi" }
+  ];
 
   const isYearValid = (dateString: string, isFullDate: boolean = false) => {
     if (!dateString) return true;
     let year;
     if (isFullDate) {
-      // Format YYYY-MM-DD
       year = parseInt(dateString.split('-')[0]);
     } else {
-      // Format YYYY
       year = parseInt(dateString);
     }
     return year <= currentYear;
   };
 
   const validateYearLogic = () => {
-    // Validasi Step 1: Tanggal Lahir Siswa
     if (step === 1) {
       if (!isYearValid(formData.tanggal_lahir, true)) {
         alert("Tanggal lahir siswa tidak boleh melebihi tahun saat ini.");
         return false;
       }
     }
-
-    // Validasi Step 2: Tahun Lulus
     if (step === 2) {
       if (!isYearValid(formData.tahun_lulus)) {
         alert(`Tahun lulus tidak boleh melebihi tahun saat ini (${currentYear}).`);
         return false;
       }
     }
-
-    // Validasi Step 3 (Khusus Prestasi): Tahun Prestasi
     if (isPrestasi && step === 3) {
       for (let i = 0; i < prestasiList.length; i++) {
         if (!isYearValid(prestasiList[i].tahun)) {
@@ -106,8 +112,6 @@ export default function RegistrationForm() {
         }
       }
     }
-
-    // Validasi Data Orang Tua: Tanggal Lahir Ayah & Ibu
     const stepOrangTua = isPrestasi ? 4 : 3;
     if (step === stepOrangTua) {
       if (!isYearValid(formData.tanggal_lahir_ayah, true)) {
@@ -119,26 +123,45 @@ export default function RegistrationForm() {
         return false;
       }
     }
-
     return true;
   };
 
-  const nextStep = () => { 
+  const nextStep = async () => { 
     if (!isStepValid()) return;
-    if (validateYearLogic()) {
-      setStep(step + 1); 
-      // Tidak perlu panggil scrollToTop() manual lagi karena sudah di-handle useEffect
+    if (!validateYearLogic()) return;
+    setNisnError("");
+
+    if (step === 2) {
+      setIsCheckingNisn(true);
+      try {
+        const response = await fetch(`/server/api/user/pendaftaran?nisn=${formData.nisn}`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const result = await response.json();
+        if (result.exists) {
+          setNisnError("NISN ini sudah terdaftar. Mohon periksa kembali atau hubungi admin.");
+          setIsCheckingNisn(false);
+          return;
+        }
+      } catch (error) {
+        alert("Terjadi kesalahan koneksi saat mengecek NISN.");
+        setIsCheckingNisn(false);
+        return;
+      }
+      setIsCheckingNisn(false);
     }
+    setStep(step + 1); 
   };
 
   const prevStep = () => { 
     setStep(step - 1); 
-    // Tidak perlu panggil scrollToTop() manual lagi karena sudah di-handle useEffect
   };
 
   const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value.replace(/[^0-9]/g, '') }));
+    if (name === 'nisn') setNisnError("");
   };
 
   const handleChange = (e: any) => {
@@ -146,7 +169,6 @@ export default function RegistrationForm() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // Handle khusus DatePicker untuk mengubah state string YYYY-MM-DD
   const handleDateChange = (name: string, date: Date | undefined) => {
     if (date) {
       const formatted = format(date, "yyyy-MM-dd");
@@ -165,6 +187,7 @@ export default function RegistrationForm() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFormData(prev => ({ ...prev, bukti_pembayaran: e.target.files![0] }));
+      setSubmitError(""); 
     }
   };
 
@@ -176,9 +199,11 @@ export default function RegistrationForm() {
     setPrestasiList(newList);
   };
 
- const handleSubmit = async () => {
+  const handleSubmit = async () => {
     if (!validateYearLogic()) return;
     setIsSubmitting(true);
+    setSubmitError(""); 
+
     try {
       const data = new FormData();
       Object.entries(formData).forEach(([key, value]) => {
@@ -202,16 +227,20 @@ export default function RegistrationForm() {
       try {
         result = JSON.parse(responseText);
       } catch (e) {
-        throw new Error("Server error");
+        throw new Error("Server error: Respon tidak valid");
       }
 
       if (response.ok) {
-        window.location.href = "/client/user/success"; 
-      } else {
-        alert("Gagal: " + (result.error || "Terjadi kesalahan"));
-      }
+  // === TAMBAHKAN KODE INI ===
+  localStorage.setItem('ppdb_success_nama', formData.nama_lengkap);
+  localStorage.setItem('ppdb_success_nisn', formData.nisn || "-");
+  localStorage.setItem('ppdb_success_metode', paymentMethod);
+  // ==========================
+
+  window.location.href = "/client/user/success"; 
+}
     } catch (error: any) {
-      alert("Koneksi Error: " + error.message);
+      setSubmitError("Koneksi Error: " + error.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -237,9 +266,46 @@ export default function RegistrationForm() {
 
       <Navbar />
       <main className="max-w-[1250px] mx-auto px-4 md:px-6 py-10">
+
+        {/* --- KHUSUS MOBILE: CARD HEADER & STEPPER --- */}
+        <div className="lg:hidden mb-6">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <h2 className="text-lg font-bold text-gray-800 mb-2">Form Pendaftaran Calon Siswa</h2>
+            <p className="text-[13px] text-gray-500 leading-relaxed mb-6">
+              Isi formulir pendaftaran calon siswa Madrasah Aliyah Pesantren Persis Kudang 212 dengan data yang lengkap dan benar.
+            </p>
+
+            {/* Mobile Stepper Horizontal */}
+            <div className="flex items-center justify-between">
+              {stepList.map((item) => (
+                <div key={item.num} className="flex items-center gap-2">
+                   {/* Circle Number */}
+                  <div className={`
+                    w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold border transition-colors
+                    ${step === item.num 
+                      ? 'border-[#428E5F] text-[#428E5F] bg-green-50' 
+                      : 'border-gray-200 text-gray-400'}
+                  `}>
+                    {item.num}
+                  </div>
+                  
+                  {/* Label Text (Hanya muncul jika step aktif) */}
+                  {step === item.num && (
+                    <span className="text-[#428E5F] font-bold text-xs animate-in fade-in slide-in-from-left-2 whitespace-nowrap">
+                      {item.label}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        {/* --- END KHUSUS MOBILE --- */}
+
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Sidebar Alur */}
-          <div className="lg:col-span-4 space-y-6">
+          
+          {/* Sidebar Alur (DESKTOP ONLY - hidden on Mobile) */}
+          <div className="hidden lg:block lg:col-span-4 space-y-6">
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
               <h2 className="text-xl font-bold text-gray-800 border-b border-gray-50 pb-4">Alur Pendaftaran</h2>
               <div className="space-y-6 mt-6">
@@ -271,17 +337,17 @@ export default function RegistrationForm() {
 
               <div className="p-8 flex-grow">
                 
-                {/* STEP 1: DATA SISWA */}
+                {/* STEP 1: DATA SISWA - (DENGAN MAXLENGTH) */}
                 {step === 1 && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in duration-300">
                     <div className="md:col-span-2">
                         <SelectGroup label="Jalur Pendaftaran" name="jalur_pendaftaran" value={formData.jalur_pendaftaran} onChange={handleChange} options={["Umum", "Tahfidz", "Prestasi"]} />
                     </div>
-                    <InputGroup label="Nama Siswa" name="nama_lengkap" value={formData.nama_lengkap} onChange={handleChange} placeholder="Nama lengkap" />
+                    {/* Batasi nama 100 karakter */}
+                    <InputGroup label="Nama Siswa" name="nama_lengkap" value={formData.nama_lengkap} onChange={handleChange} placeholder="Nama lengkap" maxLength={100} />
                     <SelectGroup label="Jenis Kelamin" name="jenis_kelamin" value={formData.jenis_kelamin} onChange={handleChange} options={["Putra", "Putri"]} />
-                    <InputGroup label="Tempat Lahir" name="tempat_lahir" value={formData.tempat_lahir} onChange={handleChange} placeholder="Contoh: Garut" />
+                    <InputGroup label="Tempat Lahir" name="tempat_lahir" value={formData.tempat_lahir} onChange={handleChange} placeholder="Contoh: Garut" maxLength={50} />
                     
-                    {/* GANTI TANGGAL LAHIR DENGAN DATE PICKER */}
                     <DatePickerGroup 
                       label="Tanggal Lahir" 
                       name="tanggal_lahir" 
@@ -290,37 +356,56 @@ export default function RegistrationForm() {
                       placeholder="Pilih Tanggal Lahir"
                     />
 
-                    <InputGroup label="Anak Ke" name="anak_ke" value={formData.anak_ke} onChange={handleNumberChange} placeholder="Contoh: 1" />
-                    <InputGroup label="Jumlah Saudara" name="jumlah_saudara" value={formData.jumlah_saudara} onChange={handleNumberChange} placeholder="0" />
-                    <InputGroup label="No HP (WA)" name="no_hp" value={formData.no_hp} onChange={handleNumberChange} placeholder="08xxxxxxxx" maxLength={14} />
-                    <InputGroup label="Email" name="email" value={formData.email} onChange={handleChange} placeholder="email@gmail.com" />
-                    <div className="md:col-span-2"><InputGroup label="Alamat Lengkap" name="alamat_rumah" value={formData.alamat_rumah} onChange={handleChange} placeholder="Jl. Raya No. 1" /></div>
-                    <InputGroup label="RT" name="rt" value={formData.rt} onChange={handleNumberChange} placeholder="00" />
-                    <InputGroup label="RW" name="rw" value={formData.rw} onChange={handleNumberChange} placeholder="00" />
+                    {/* Batasi Angka */}
+                    <InputGroup label="Anak Ke" name="anak_ke" value={formData.anak_ke} onChange={handleNumberChange} placeholder="Contoh: 1" maxLength={2} />
+                    <InputGroup label="Jumlah Saudara" name="jumlah_saudara" value={formData.jumlah_saudara} onChange={handleNumberChange} placeholder="0" maxLength={2} />
+                    <InputGroup label="No HP (WA)" name="no_hp" value={formData.no_hp} onChange={handleNumberChange} placeholder="08xxxxxxxx" maxLength={15} />
+                    <InputGroup label="Email" name="email" value={formData.email} onChange={handleChange} placeholder="email@gmail.com" maxLength={100} />
+                    <div className="md:col-span-2"><InputGroup label="Alamat Lengkap" name="alamat_rumah" value={formData.alamat_rumah} onChange={handleChange} placeholder="Jl. Raya No. 1" maxLength={255} /></div>
+                    
+                    {/* Batasi RT/RW 5 karakter (Sesuai request agar aman database) */}
+                    <InputGroup label="RT" name="rt" value={formData.rt} onChange={handleNumberChange} placeholder="00" maxLength={5} />
+                    <InputGroup label="RW" name="rw" value={formData.rw} onChange={handleNumberChange} placeholder="00" maxLength={5} />
                     <InputGroup label="Kode Pos" name="kode_pos" value={formData.kode_pos} onChange={handleNumberChange} placeholder="xxxxx" maxLength={5} />
                     <SelectGroup label="Ukuran Baju Olahraga" name="ukuran_baju" value={formData.ukuran_baju} onChange={handleChange} options={["S", "M", "L", "XL", "XXL"]} />
                   </div>
                 )}
 
-                {/* STEP 2: SEKOLAH ASAL */}
+                {/* STEP 2: SEKOLAH ASAL - (DENGAN MAXLENGTH) */}
                 {step === 2 && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in duration-300">
-                    <InputGroup label="NISN" name="nisn" value={formData.nisn} onChange={handleNumberChange} placeholder="10 Digit NISN" maxLength={10} />
-                    <InputGroup label="Nama Sekolah Asal" name="asal_sekolah" value={formData.asal_sekolah} onChange={handleChange} placeholder="SMP/MTs Asal" />
-                    <div className="md:col-span-2"><InputGroup label="Alamat Sekolah" name="alamat_sekolah" value={formData.alamat_sekolah} onChange={handleChange} placeholder="Alamat lengkap sekolah asal" /></div>
+                    <div className="md:col-span-1">
+                      <InputGroup 
+                        label="NISN" 
+                        name="nisn" 
+                        value={formData.nisn} 
+                        onChange={handleNumberChange} 
+                        placeholder="10 Digit NISN" 
+                        maxLength={10} 
+                        isError={!!nisnError} 
+                      />
+                      {nisnError && (
+                        <div className="flex items-center gap-2 mt-2 text-red-500 text-xs font-medium animate-in slide-in-from-top-1">
+                          <AlertCircle size={14} /> {nisnError}
+                        </div>
+                      )}
+                    </div>
+                    
+                    <InputGroup label="Nama Sekolah Asal" name="asal_sekolah" value={formData.asal_sekolah} onChange={handleChange} placeholder="SMP/MTs Asal" maxLength={100} />
+                    <div className="md:col-span-2"><InputGroup label="Alamat Sekolah" name="alamat_sekolah" value={formData.alamat_sekolah} onChange={handleChange} placeholder="Alamat lengkap sekolah asal" maxLength={255} /></div>
                     <InputGroup label="Tahun Lulus" name="tahun_lulus" value={formData.tahun_lulus} onChange={handleNumberChange} placeholder="Contoh: 2025" maxLength={4} />
                     <InputGroup label="Kode Pos Sekolah" name="kode_pos_sekolah" value={formData.kode_pos_sekolah} onChange={handleNumberChange} placeholder="xxxxx" maxLength={5}/>
                   </div>
                 )}
 
-                {/* STEP 3: PRESTASI */}
+                {/* STEP 3: PRESTASI - (DENGAN MAXLENGTH) */}
                 {isPrestasi && step === 3 && (
                   <div className="space-y-6 animate-in fade-in duration-300">
                     {prestasiList.map((item, index) => (
                       <div key={index} className="border-b border-gray-100 pb-8 last:border-0 text-left">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
                           <div className="space-y-2 w-full"><label className="text-[13px] font-bold text-gray-700">Nama Prestasi</label>
-                            <input value={item.nama} onChange={(e) => handlePrestasiChange(index, "nama", e.target.value)} placeholder="OSN" className="w-full px-4 py-3 rounded-lg border border-gray-200 outline-none text-sm" />
+                            <input value={item.nama} onChange={(e) => handlePrestasiChange(index, "nama", e.target.value)} placeholder="OSN" className="w-full px-4 py-3 rounded-lg border border-gray-200 outline-none text-sm" maxLength={100} />
                           </div>
                           <div className="space-y-2 w-full"><label className="text-[13px] font-bold text-gray-700">Jenis Prestasi</label>
                             <select value={item.jenis_prestasi} onChange={(e) => handlePrestasiChange(index, "jenis_prestasi", e.target.value)} className="w-full px-4 py-3 rounded-lg border border-gray-200 text-sm">
@@ -333,13 +418,13 @@ export default function RegistrationForm() {
                             </select>
                           </div>
                           <div className="space-y-2 w-full"><label className="text-[13px] font-bold text-gray-700">Peringkat</label>
-                            <input value={item.peringkat} onChange={(e) => handlePrestasiChange(index, "peringkat", e.target.value)} placeholder="1" className="w-full px-4 py-3 rounded-lg border border-gray-200 text-sm" />
+                            <input value={item.peringkat} onChange={(e) => handlePrestasiChange(index, "peringkat", e.target.value)} placeholder="1" className="w-full px-4 py-3 rounded-lg border border-gray-200 text-sm" maxLength={30} />
                           </div>
                           <div className="space-y-2 w-full"><label className="text-[13px] font-bold text-gray-700">Tahun</label>
-                            <input value={item.tahun} onChange={(e) => handlePrestasiChange(index, "tahun", e.target.value)} placeholder="2024" className="w-full px-4 py-3 rounded-lg border border-gray-200 text-sm" />
+                            <input value={item.tahun} onChange={(e) => handlePrestasiChange(index, "tahun", e.target.value)} placeholder="2024" className="w-full px-4 py-3 rounded-lg border border-gray-200 text-sm" maxLength={4} />
                           </div>
                           <div className="space-y-2 w-full"><label className="text-[13px] font-bold text-gray-700">Penyelenggara</label>
-                            <input value={item.penyelenggara} onChange={(e) => handlePrestasiChange(index, "penyelenggara", e.target.value)} placeholder="Kemdikbud" className="w-full px-4 py-3 rounded-lg border border-gray-200 text-sm" />
+                            <input value={item.penyelenggara} onChange={(e) => handlePrestasiChange(index, "penyelenggara", e.target.value)} placeholder="Kemdikbud" className="w-full px-4 py-3 rounded-lg border border-gray-200 text-sm" maxLength={100} />
                           </div>
                           <div className="flex gap-2">
                             <button type="button" onClick={addPrestasi} className="p-3 bg-[#428E5F] text-white rounded-lg"><Plus size={20}/></button>
@@ -351,14 +436,13 @@ export default function RegistrationForm() {
                   </div>
                 )}
 
-                {/* STEP DATA ORANG TUA */}
+                {/* STEP DATA ORANG TUA - (DENGAN MAXLENGTH) */}
                 {step === (isPrestasi ? 4 : 3) && (
                   <div className="space-y-8 animate-in fade-in duration-300">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <InputGroup label="Nama Ayah" name="nama_ayah" value={formData.nama_ayah} onChange={handleChange} placeholder="Ayah" />
-                      <InputGroup label="Tempat Lahir" name="tempat_lahir_ayah" value={formData.tempat_lahir_ayah} onChange={handleChange} placeholder="Garut" />
+                      <InputGroup label="Nama Ayah" name="nama_ayah" value={formData.nama_ayah} onChange={handleChange} placeholder="Ayah" maxLength={100} />
+                      <InputGroup label="Tempat Lahir" name="tempat_lahir_ayah" value={formData.tempat_lahir_ayah} onChange={handleChange} placeholder="Garut" maxLength={50} />
                       
-                      {/* DATE PICKER AYAH */}
                       <DatePickerGroup 
                         label="Tanggal Lahir" 
                         name="tanggal_lahir_ayah" 
@@ -367,16 +451,15 @@ export default function RegistrationForm() {
                         placeholder="Pilih Tanggal Lahir"
                       />
 
-                      <InputGroup label="Pekerjaan" name="pekerjaan_ayah" value={formData.pekerjaan_ayah} onChange={handleChange} placeholder="PNS" />
+                      <InputGroup label="Pekerjaan" name="pekerjaan_ayah" value={formData.pekerjaan_ayah} onChange={handleChange} placeholder="PNS" maxLength={50} />
                       <SelectGroup label="Pendidikan" name="pendidikan_ayah" value={formData.pendidikan_ayah} onChange={handleChange} options={["SD", "SMP", "SMA", "S1","S2","S3"]} />
                     </div>
                     <RadioGroup label="Penghasilan Ayah" name="penghasilan_ayah" selected={formData.penghasilan_ayah} onChange={handleChange} options={["Kurang Dari 1 Juta", "1-3 Juta", "3-5 Juta", "Lebih Dari 5 Juta"]} />
                     <hr />
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <InputGroup label="Nama Ibu" name="nama_ibu" value={formData.nama_ibu} onChange={handleChange} placeholder="Ibu" />
-                      <InputGroup label="Tempat Lahir" name="tempat_lahir_ibu" value={formData.tempat_lahir_ibu} onChange={handleChange} placeholder="Garut" />
+                      <InputGroup label="Nama Ibu" name="nama_ibu" value={formData.nama_ibu} onChange={handleChange} placeholder="Ibu" maxLength={100} />
+                      <InputGroup label="Tempat Lahir" name="tempat_lahir_ibu" value={formData.tempat_lahir_ibu} onChange={handleChange} placeholder="Garut" maxLength={50} />
                       
-                      {/* DATE PICKER IBU */}
                       <DatePickerGroup 
                         label="Tanggal Lahir" 
                         name="tanggal_lahir_ibu" 
@@ -385,11 +468,11 @@ export default function RegistrationForm() {
                         placeholder="Pilih Tanggal Lahir"
                       />
 
-                      <InputGroup label="Pekerjaan" name="pekerjaan_ibu" value={formData.pekerjaan_ibu} onChange={handleChange} placeholder="PNS" />
+                      <InputGroup label="Pekerjaan" name="pekerjaan_ibu" value={formData.pekerjaan_ibu} onChange={handleChange} placeholder="PNS" maxLength={50} />
                       <SelectGroup label="Pendidikan" name="pendidikan_ibu" value={formData.pendidikan_ibu} onChange={handleChange} options={["SD", "SMP", "SMA", "S1","S2","S3"]} />
                     </div>
                     <RadioGroup label="Penghasilan Ibu" name="penghasilan_ibu" selected={formData.penghasilan_ibu} onChange={handleChange} options={["Kurang Dari 1 Juta", "1-3 Juta", "3-5 Juta", "Lebih Dari 5 Juta"]} />
-                    <InputGroup label="No Hp Orang Tua" name="no_hp_orang_tua" value={formData.no_hp_orang_tua} onChange={handleNumberChange} placeholder="081234567890" maxLength={14} />
+                    <InputGroup label="No Hp Orang Tua" name="no_hp_orang_tua" value={formData.no_hp_orang_tua} onChange={handleNumberChange} placeholder="081234567890" maxLength={15} />
                     <hr />
                   </div>
                 )}
@@ -452,7 +535,10 @@ export default function RegistrationForm() {
                         <label className="text-[13px] font-bold text-gray-700">Bukti Pembayaran</label>
                         <div 
                           onClick={() => fileInputRef.current?.click()} 
-                          className="border-2 border-dashed border-gray-200 rounded-xl p-10 flex flex-col items-center justify-center bg-white hover:border-[#428E5F] transition-all cursor-pointer group"
+                          className={`
+                            border-2 border-dashed rounded-xl p-10 flex flex-col items-center justify-center transition-all cursor-pointer group
+                            ${submitError ? 'border-red-300 bg-red-50/10' : 'border-gray-200 bg-white hover:border-[#428E5F]'}
+                          `}
                         >
                           <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
                           {formData.bukti_pembayaran ? (
@@ -476,15 +562,33 @@ export default function RegistrationForm() {
                 )}
               </div>
 
+              {/* --- TAMPILAN PESAN ERROR DIBAWAH --- */}
+              {submitError && (
+                  <div className="px-8 pb-0 animate-in slide-in-from-top-2 fade-in">
+                    <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-lg text-sm flex items-start gap-3">
+                        <AlertCircle size={18} className="shrink-0 mt-0.5" />
+                        <span className="font-medium">{submitError}</span>
+                    </div>
+                  </div>
+              )}
+
               {/* Navigation Footer */}
               <div className="p-8 border-t border-gray-50 flex justify-end items-center gap-8 bg-gray-50/50">
                 {step > 1 && <button onClick={prevStep} className="text-[#428E5F] font-bold text-sm hover:underline cursor-pointer">Kembali</button>}
                 <button 
                   onClick={step === (isPrestasi ? 5 : 4) ? handleSubmit : nextStep}
-                  disabled={!isStepValid() || isSubmitting}
-                  className={`px-10 py-3 font-bold rounded-lg transition-all active:scale-95 shadow-md ${isStepValid() ? 'bg-[#428E5F] text-white hover:bg-[#36754e] cursor-pointer' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
+                  disabled={!isStepValid() || isSubmitting || isCheckingNisn}
+                  className={`px-10 py-3 font-bold rounded-lg transition-all active:scale-95 shadow-md flex items-center gap-2 ${isStepValid() && !isCheckingNisn ? 'bg-[#428E5F] text-white hover:bg-[#36754e] cursor-pointer' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
                 >
-                  {isSubmitting ? "Memproses..." : step === (isPrestasi ? 5 : 4) ? "Simpan & Kirim" : "Selanjutnya"}
+                  {isSubmitting ? (
+                    <>Memproses... <Loader2 className="animate-spin" size={18}/></>
+                  ) : isCheckingNisn ? (
+                    <>Mengecek NISN... <Loader2 className="animate-spin" size={18}/></>
+                  ) : step === (isPrestasi ? 5 : 4) ? (
+                    "Simpan & Kirim"
+                  ) : (
+                    "Selanjutnya"
+                  )}
                 </button>
               </div>
             </div>
@@ -496,51 +600,28 @@ export default function RegistrationForm() {
   );
 }
 
-// --- CUSTOM DATE PICKER COMPONENT (ALA SHADCN) ---
+// --- HELPER COMPONENTS ---
+
 function DatePickerGroup({ label, value, onChange, placeholder }: any) {
   const dateValue = value ? new Date(value) : undefined;
-
   return (
     <div className="space-y-2 flex flex-col text-left">
       <label className="text-[13px] font-bold text-gray-700">{label}</label>
       <Popover>
         <PopoverTrigger asChild>
-          <Button
-            variant={"outline"}
-            className={cn(
-              "w-full pl-3 text-left font-normal py-6 rounded-lg border-gray-200 hover:bg-gray-50", 
-              !value && "text-muted-foreground"
-            )}
-          >
-            {value ? (
-              format(new Date(value), "PPP", { locale: id })
-            ) : (
-              <span className="text-gray-400">{placeholder}</span>
-            )}
+          <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal py-6 rounded-lg border-gray-200 hover:bg-gray-50", !value && "text-muted-foreground")}>
+            {value ? format(new Date(value), "PPP", { locale: id }) : <span className="text-gray-400">{placeholder}</span>}
             <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
-          <Calendar
-            mode="single"
-            selected={dateValue}
-            onSelect={onChange}
-            disabled={(date) =>
-              date > new Date() || date < new Date("1900-01-01")
-            }
-            initialFocus
-            locale={id}
-            captionLayout="dropdown" // SUDAH DIPERBAIKI (sebelumnya 'dropdown-buttons')
-            fromYear={1960}
-            toYear={2030}
-          />
+          <Calendar mode="single" selected={dateValue} onSelect={onChange} disabled={(date) => date > new Date() || date < new Date("1900-01-01")} initialFocus locale={id} captionLayout="dropdown" fromYear={1960} toYear={2030} />
         </PopoverContent>
       </Popover>
     </div>
   );
 }
 
-// COMPONENTS HELPERS LAINNYA
 function InputReadOnly({ label, value }: any) {
   return (
     <div className="space-y-2 text-left">
@@ -550,11 +631,20 @@ function InputReadOnly({ label, value }: any) {
   );
 }
 
-function InputGroup({ label, name, value, onChange, placeholder, type = "text", maxLength }: any) {
+// Tambahkan prop isError untuk menampilkan border merah jika error
+function InputGroup({ label, name, value, onChange, placeholder, type = "text", maxLength, isError }: any) {
   return (
     <div className="space-y-2 text-left">
       <label className="text-[13px] font-bold text-gray-700">{label}</label>
-      <input type={type} name={name} value={value} onChange={onChange} maxLength={maxLength} placeholder={placeholder} className="w-full px-4 py-3 rounded-lg border border-gray-200 outline-none text-sm transition-focus focus:border-[#428E5F]" />
+      <input 
+        type={type} 
+        name={name} 
+        value={value} 
+        onChange={onChange} 
+        maxLength={maxLength} 
+        placeholder={placeholder} 
+        className={`w-full px-4 py-3 rounded-lg border outline-none text-sm transition-focus focus:border-[#428E5F] ${isError ? 'border-red-500 focus:border-red-500 bg-red-50' : 'border-gray-200'}`} 
+      />
     </div>
   );
 }

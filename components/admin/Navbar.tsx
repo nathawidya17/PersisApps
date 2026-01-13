@@ -38,13 +38,7 @@ export default function Navbar() {
   return (
     <header className="h-20 bg-white border-b border-gray-100 flex items-center justify-end px-8 sticky top-0 z-10 ml-64">
       <div className="flex items-center gap-6">
-        {/* Notifikasi */}
-        <button className="relative text-gray-400 hover:text-gray-600 transition-colors">
-          <Bell size={22} />
-          <span className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full text-[10px] text-white flex items-center justify-center font-medium">
-            3
-          </span>
-        </button>
+  
 
         {/* Profil Admin & Logout Dropdown */}
         <div className="relative">
@@ -68,12 +62,7 @@ export default function Navbar() {
               <div className="px-4 py-2 border-b border-gray-50 md:hidden">
                 <p className="text-sm font-bold text-gray-800">{adminName}</p>
               </div>
-              <button className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
-                <User size={16} /> Profil Saya
-              </button>
-              <button className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
-                <Settings size={16} /> Pengaturan
-              </button>
+             
               <button 
                 onClick={handleLogout}
                 className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-500 hover:bg-red-50 transition-colors font-medium"

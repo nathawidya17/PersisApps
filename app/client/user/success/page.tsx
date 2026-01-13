@@ -1,20 +1,43 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Navbar from '@/components/user/Navbar';
 import Footer from '@/components/user/Footer';
 import Image from 'next/image';
 import Link from 'next/link';
 
 export default function PaymentSuccessPage() {
+  // State untuk menampung data pendaftar yang diambil dari Local Storage
+  const [studentData, setStudentData] = useState({
+    nama: "",
+    nisn: "",
+    metode: ""
+  });
+
+  // Ambil data saat halaman dimuat
+  useEffect(() => {
+    // Pastikan kode berjalan di client-side
+    if (typeof window !== 'undefined') {
+      const savedNama = localStorage.getItem('ppdb_success_nama') || "Calon Siswa";
+      const savedNisn = localStorage.getItem('ppdb_success_nisn') || "-";
+      const savedMetode = localStorage.getItem('ppdb_success_metode') || "Transfer";
+
+      setStudentData({
+        nama: savedNama,
+        nisn: savedNisn,
+        metode: savedMetode
+      });
+    }
+  }, []);
+
   // Nomor WhatsApp Admin PPDB
-  const adminWhatsApp = "6281218212498";
+  const adminWhatsApp = "6285117048212";
   
-  // Fungsi Chat WhatsApp
+  // Fungsi Chat WhatsApp Dinamis
   const handleWhatsAppChat = () => {
-    const message = encodeURIComponent(
-      "Halo Admin PPDB Persis Kudang,\n\nSaya telah melakukan pendaftaran dan pembayaran. Mohon bantuannya untuk melakukan verifikasi segera.\n\nTerima kasih."
-    );
+    const text = `Halo Admin PPDB MA Persis Kudang 212 ,\n\nSaya *${studentData.nama}* dengan NISN *${studentData.nisn}* telah melakukan pendaftaran dan pembayaran via *${studentData.metode}*.\n\nMohon bantuannya untuk melakukan verifikasi segera.\nTerima kasih.`;
+    
+    const message = encodeURIComponent(text);
     window.open(`https://wa.me/${adminWhatsApp}?text=${message}`, '_blank');
   };
 
@@ -31,13 +54,13 @@ export default function PaymentSuccessPage() {
     <div className="min-h-screen bg-[#F8F9FA] flex flex-col font-sans text-left">
       <Navbar />
 
-      <main className="flex-grow flex flex-col items-center justify-center px-4 py-10 md:py-20 animate-in fade-in duration-700">
-        <div className="max-w-[750px] w-full rounded-2xl p-8 md:p-16 text-center flex flex-col items-center ">
+      <main className="flex-grow flex flex-col items-center justify-center px-4 py-5 md:py-8 animate-in fade-in duration-700">
+        <div className="max-w-[750px] w-full rounded-2xl p-6 md:p-16 text-center flex flex-col items-center ">
           
-          {/* Gambar Ilustrasi */}
-          <div className="relative w-48 h-48 mb-8">
+          {/* Ilustrasi */}
+          <div className="relative w-32 h-32 md:w-48 md:h-48 mb-6 md:mb-8"> 
             <Image 
-              src="/Pending Payment.png" 
+              src="/Pending Payment.svg" 
               alt="Waiting Verification" 
               fill 
               className="object-contain"
@@ -46,33 +69,33 @@ export default function PaymentSuccessPage() {
           </div>
 
           {/* Judul Utama */}
-          <h1 className="text-[26px] md:text-[28px] font-bold text-[#428E5F] mb-3 tracking-tight">
+          <h1 className="text-[22px] md:text-[28px] font-bold text-[#428E5F] mb-2 md:mb-3 tracking-tight">
             Menunggu Verifikasi Pembayaran
           </h1>
           
           {/* Tanggal Dinamis */}
-          <p className="text-gray-400 text-[13px] mb-6 font-medium">
+          <p className="text-gray-400 text-[12px] md:text-[13px] mb-4 md:mb-6 font-medium">
             {currentDateTime} WIB
           </p>
 
           {/* Deskripsi */}
-          <p className="text-gray-500 text-[15px] md:text-[16px] leading-relaxed max-w-[520px] mb-12">
-            Saat ini pembayaran Anda sedang dalam proses verifikasi oleh pihak sekolah. 
-            Mohon menunggu konfirmasi selanjutnya melalui akun Anda atau WhatsApp.
+          <p className="text-gray-500 text-[14px] md:text-[16px] leading-relaxed max-w-[520px] mb-8 md:mb-12">
+            Terima kasih <strong>{studentData.nama}</strong>, pembayaran Anda sedang dalam proses verifikasi oleh pihak sekolah. 
+            Mohon menunggu konfirmasi selanjutnya atau hubungi admin melalui WhatsApp.
           </p>
 
           {/* Action Buttons */}
-          <div className="flex flex-col gap-4 w-full max-w-[420px]">
+          <div className="flex flex-col gap-3 md:gap-4 w-full max-w-[420px]">
             <button 
               onClick={handleWhatsAppChat}
-              className="w-full bg-[#428E5F] text-white font-bold py-4 rounded-xl flex items-center justify-center gap-3 transition-all hover:bg-[#36754e] active:scale-95 shadow-md group"
+              className="w-full bg-[#428E5F] text-white font-bold py-3 md:py-4 rounded-xl flex items-center justify-center gap-3 transition-all hover:bg-[#36754e] active:scale-95 shadow-md group text-sm md:text-base"
             >
               Konfirmasi Melalui Whatsapp
-              {/* Bootstrap Icon WhatsApp (SVG Path) */}
+              {/* Bootstrap Icon WhatsApp */}
               <svg 
                 xmlns="http://www.w3.org/2000/svg" 
-                width="20" 
-                height="20" 
+                width="18" 
+                height="18" 
                 fill="currentColor" 
                 className="bi bi-whatsapp group-hover:scale-110 transition-transform" 
                 viewBox="0 0 16 16"
@@ -83,7 +106,7 @@ export default function PaymentSuccessPage() {
 
             <Link 
               href="/"
-              className="w-full bg-white border-2 border-gray-100 text-gray-500 font-bold py-4 rounded-xl transition-all hover:bg-gray-50 active:scale-95 text-center shadow-sm"
+              className="w-full bg-white border-2 border-gray-100 text-gray-500 font-bold py-3 md:py-4 rounded-xl transition-all hover:bg-gray-50 active:scale-95 text-center shadow-sm text-sm md:text-base"
             >
               Kembali ke Beranda
             </Link>

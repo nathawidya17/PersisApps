@@ -18,10 +18,18 @@ import * as XLSX from "xlsx";
 export default function PPDBPage() {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // --- STATE FILTERING ---
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterGender, setFilterGender] = useState("Semua");
+  const [filterTahap, setFilterTahap] = useState("Semua");
+  const [filterJalur, setFilterJalur] = useState("Semua");
+
+  // --- PAGINATION STATE ---
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
+  // --- FETCH DATA ---
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -36,18 +44,49 @@ export default function PPDBPage() {
     fetchData();
   }, []);
 
+  // --- LOGIC FILTERING (UPDATED) ---
   const filteredData = useMemo(() => {
-    return data.filter(item => 
-      item.nama_lengkap?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.NISN?.includes(searchTerm)
-    );
-  }, [data, searchTerm]);
+    return data.filter(item => {
+      // 1. Search (Nama / NISN)
+      const matchSearch = 
+        item.nama_lengkap?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.NISN?.includes(searchTerm);
 
+      // 2. Filter Gender (Putra / Putri)
+      const matchGender = filterGender === "Semua" || item.jenis_kelamin === filterGender;
+
+      // 3. Filter Tahap (Pendaftaran / Daftar Ulang)
+      // Note: Pastikan value 'status' di DB konsisten (case-insensitive check)
+      const matchTahap = filterTahap === "Semua" || item.status?.toLowerCase() === filterTahap.toLowerCase();
+
+      // 4. Filter Jalur (Umum / Tahfidz / Prestasi)
+      const matchJalur = filterJalur === "Semua" || item.jalur?.toLowerCase() === filterJalur.toLowerCase();
+
+      return matchSearch && matchGender && matchTahap && matchJalur;
+    });
+  }, [data, searchTerm, filterGender, filterTahap, filterJalur]);
+
+  // --- PAGINATION LOGIC ---
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+  
+  // Reset ke page 1 jika filter berubah
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [itemsPerPage, filterGender, filterTahap, filterJalur, searchTerm]);
+
   const paginatedData = filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
+  // --- EXPORT EXCEL ---
   const exportToExcel = () => {
-    const ws = XLSX.utils.json_to_sheet(filteredData);
+    const ws = XLSX.utils.json_to_sheet(filteredData.map(s => ({
+      NISN: s.NISN,
+      Nama: s.nama_lengkap,
+      Gender: s.jenis_kelamin,
+      TTL: `${s.tempat_lahir}, ${s.tanggal_lahir}`,
+      Tahap: s.status,
+      Jalur: s.jalur,
+      Update: s.updated_at
+    })));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Data PPDB");
     XLSX.writeFile(wb, "Data_PPDB.xlsx");
@@ -56,33 +95,75 @@ export default function PPDBPage() {
   if (loading) return <div className="ml-64 p-10 font-light text-gray-400">Memuat Data PPDB...</div>;
 
   return (
-    /* px-5 pt-5 (20px) agar sama dengan Dashboard & Daftar Siswa */
     <div className="ml-64 bg-gray-100 min-h-screen pb-10 px-5 pt-5 antialiased font-sans">
       <h2 className="text-xl font-bold text-gray-800 mb-5">PPDB</h2>
 
       <div className="bg-white p-6 rounded-[12px] shadow-sm border border-gray-100 mb-5 overflow-hidden">
-        {/* TOOLBAR: Menggunakan gap-5 (20px) */}
-        <div className="flex flex-col md:flex-row justify-between gap-5">
-          <div className="flex flex-1 gap-3">
-            <div className="relative flex-1 max-w-sm">
+        
+        {/* TOOLBAR FILTER */}
+        <div className="flex flex-col xl:flex-row justify-between gap-5">
+          <div className="flex flex-1 gap-3 flex-wrap">
+            
+            {/* Search Input */}
+            <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
               <input 
                 type="text" 
                 placeholder="Cari..." 
                 className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-[8px] text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20"
                 value={searchTerm}
-                onChange={(e) => {setSearchTerm(e.target.value); setCurrentPage(1);}}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <button className="flex items-center gap-2 px-4 py-2 bg-gray-50 border border-gray-200 rounded-[8px] text-sm text-gray-400 hover:bg-gray-100 transition-all cursor-pointer">
-              <Filter size={16} />
-              <span className="text-gray-600 font-medium">Filter</span>
-            </button>
+
+            {/* Filter Gender */}
+            <div className="relative">
+              <select 
+                className="appearance-none pl-10 pr-8 py-2 bg-gray-50 border border-gray-200 rounded-[8px] text-sm focus:outline-none cursor-pointer w-full text-gray-600"
+                value={filterGender}
+                onChange={(e) => setFilterGender(e.target.value)}
+              >
+                <option value="Semua">Semua Gender</option>
+                <option value="Putra">Putra</option>
+                <option value="Putri">Putri</option>
+              </select>
+              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+            </div>
+
+            {/* Filter Tahap */}
+            <div className="relative">
+              <select 
+                className="appearance-none pl-10 pr-8 py-2 bg-gray-50 border border-gray-200 rounded-[8px] text-sm focus:outline-none cursor-pointer w-full text-gray-600"
+                value={filterTahap}
+                onChange={(e) => setFilterTahap(e.target.value)}
+              >
+                <option value="Semua">Semua Tahap</option>
+                <option value="Pendaftaran">Pendaftaran</option>
+                <option value="Daftar Ulang">Daftar Ulang</option>
+              </select>
+              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+            </div>
+
+            {/* Filter Jalur */}
+            <div className="relative">
+              <select 
+                className="appearance-none pl-10 pr-8 py-2 bg-gray-50 border border-gray-200 rounded-[8px] text-sm focus:outline-none cursor-pointer w-full text-gray-600"
+                value={filterJalur}
+                onChange={(e) => setFilterJalur(e.target.value)}
+              >
+                <option value="Semua">Semua Jalur</option>
+                <option value="Umum">Umum</option>
+                <option value="Prestasi">Prestasi</option>
+                <option value="Tahfidz">Tahfidz</option>
+              </select>
+              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+            </div>
+
           </div>
           
           <button 
             onClick={exportToExcel}
-            className="flex items-center justify-center gap-2 px-6 py-2 bg-white border border-gray-200 rounded-[8px] text-sm font-medium text-gray-600 hover:bg-gray-50 transition-all cursor-pointer"
+            className="flex items-center justify-center gap-2 px-6 py-2 bg-white border border-gray-200 rounded-[8px] text-sm font-medium text-gray-600 hover:bg-gray-50 transition-all shrink-0"
           >
             <Download size={18} />
             Export Data
@@ -119,8 +200,11 @@ export default function PPDBPage() {
                   <td className="py-5 px-6 text-[12px] font-normal">{siswa.tempat_lahir}, {siswa.tanggal_lahir}</td>
                   <td className="py-5 px-6 text-center">
                     <div className="flex items-center justify-center gap-2">
-                      <div className={`w-1.5 h-1.5 rounded-full ${siswa.status === 'Daftar Ulang' ? 'bg-green-500' : 'bg-yellow-400'}`} />
-                      <span className="text-[12px] font-medium text-gray-700">{siswa.status}</span>
+                      {/* Indikator Warna Status */}
+                      <div className={`w-1.5 h-1.5 rounded-full ${
+                        siswa.status === 'Daftar Ulang' ? 'bg-green-500' : 'bg-yellow-400'
+                      }`} />
+                      <span className="text-[12px] font-medium text-gray-700 capitalize">{siswa.status}</span>
                     </div>
                   </td>
                   <td className="py-5 px-6 text-center text-[12px] font-normal capitalize">{siswa.jalur}</td>
@@ -181,7 +265,7 @@ export default function PPDBPage() {
                <div className="relative flex items-center">
                   <select 
                     value={itemsPerPage}
-                    onChange={(e) => {setItemsPerPage(Number(e.target.value)); setCurrentPage(1);}}
+                    onChange={(e) => setItemsPerPage(Number(e.target.value))}
                     className="appearance-none bg-transparent font-bold text-gray-600 pr-5 cursor-pointer focus:outline-none"
                   >
                     {[5, 10, 20, 50].map(val => (

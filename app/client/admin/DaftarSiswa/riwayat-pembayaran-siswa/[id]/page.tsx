@@ -28,7 +28,7 @@ export default function RiwayatTransaksiTagihanPage() {
       try {
         setLoading(true);
         // Pastikan endpoint ini mengembalikan field 'bukti_pembayaran' berupa URL Supabase
-        const res = await axios.get(`/server/api/admin/PPDB/riwayat-pembayaran/${id_pendaftar}?tagihan=${id_jenis}`);
+        const res = await axios.get(`/server/api/admin/DaftarSiswa/riwayat-pembayaran-siswa/${id_pendaftar}?tagihan=${id_jenis}`);
         setData(res.data);
       } catch (err) {
         console.error("Gagal memuat riwayat", err);
@@ -94,8 +94,8 @@ export default function RiwayatTransaksiTagihanPage() {
   return (
     <div className="ml-64 bg-gray-100 min-h-screen pb-10 px-5 pt-5 font-sans antialiased text-left relative">
       {/* Breadcrumb */}
-      <div className="text-[10px] text-gray-400 mb-3 tracking-widest uppercase font-bold">
-        PPDB / Detail Calon Siswa / <span className="text-green-600">Detail Tagihan</span>
+      <div className="text-[10px] text-gray-400 mb-3 tracking-widest  font-bold">
+        Daftar Siswa / Detail Siswa / <span className="text-green-600">Detail Tagihan</span>
       </div>
 
       {/* Header */}

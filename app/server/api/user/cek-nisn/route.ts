@@ -29,4 +29,4 @@ export async function POST(request: Request) {
     console.error("Error checking NISN:", error);
     return NextResponse.json({ error: "Terjadi kesalahan server" }, { status: 500 });
   }
-}
+} 

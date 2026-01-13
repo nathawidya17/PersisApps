@@ -18,7 +18,8 @@ export default function DaftarUlangPage() {
     setLoading(true);
 
     try {
-      const res = await fetch('/server/api/user/cek-nisn', {
+      // 1. Cek dulu ke API apakah NISN ada
+      const res = await fetch('/server/api/user/daftar-ulang/data', { // Menggunakan route data yang baru kita buat
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nisn }),
@@ -27,13 +28,10 @@ export default function DaftarUlangPage() {
       const result = await res.json();
 
       if (!res.ok) {
-        throw new Error(result.error || "Gagal mencari data");
+        throw new Error(result.error || "Data tidak ditemukan");
       }
 
-      // Logic sukses (Alert sementara)
-      alert(`Data ditemukan atas nama: ${result.data.nama_lengkap}.`);
-      
-      // router.push(`/client/user/tagihan?nisn=${nisn}`); 
+      router.push(`/client/user/daftar-ulang/form?nisn=${nisn}`); 
 
     } catch (err: any) {
       setError(err.message);
@@ -46,8 +44,8 @@ export default function DaftarUlangPage() {
     <div className="min-h-screen flex flex-col font-sans bg-[#F8F9FA]">
       <Navbar />
       
-      {/* UPDATE: Ditambahkan 'py-24' agar ada jarak atas bawah yang luas */}
-      <main className="flex-grow flex items-center justify-center px-4 py-50 relative">
+      {/* Menggunakan py-32 agar jarak vertikal pas di tengah layar */}
+      <main className="flex-grow flex items-center justify-center px-4 py-32 relative">
         
         {/* Dekorasi Background Gradient */}
         <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-green-50/50 to-transparent pointer-events-none" />

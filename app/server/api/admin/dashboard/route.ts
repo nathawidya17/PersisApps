@@ -27,12 +27,21 @@ export async function GET() {
       const countP = await prisma.tb_pendaftaran.count({ where: { created_at: { gte: day, lt: nextDay } } });
       const countDU = await prisma.tb_daftar_ulang.count({ where: { created_at: { gte: day, lt: nextDay } } });
       
+      // FIX: Tambahkan filter status: 'lunas'
       const moneyP = await prisma.tb_pembayaran_pendaftaran.aggregate({
-        where: { tanggal_bayar: { gte: day, lt: nextDay } },
+        where: { 
+            tanggal_bayar: { gte: day, lt: nextDay },
+            status: 'lunas' // HANYA YANG LUNAS
+        },
         _sum: { nominal: true }
       });
+
+      // FIX: Tambahkan filter status: 'lunas'
       const moneyDU = await prisma.tb_pembayaran_daftar_ulang.aggregate({
-        where: { tanggal_bayar: { gte: day, lt: nextDay } },
+        where: { 
+            tanggal_bayar: { gte: day, lt: nextDay },
+            status: 'lunas' // HANYA YANG LUNAS
+        },
         _sum: { nominal: true }
       });
 
@@ -52,12 +61,21 @@ export async function GET() {
     });
 
     // --- 4. DATA KEUANGAN TOTAL ---
+    // FIX: Tambahkan filter status: 'lunas' agar total uang valid
     const [bayarP, bayarDU] = await Promise.all([
-      prisma.tb_pembayaran_pendaftaran.aggregate({ _sum: { nominal: true } }),
-      prisma.tb_pembayaran_daftar_ulang.aggregate({ _sum: { nominal: true } }),
+      prisma.tb_pembayaran_pendaftaran.aggregate({ 
+          where: { status: 'lunas' }, 
+          _sum: { nominal: true } 
+      }),
+      prisma.tb_pembayaran_daftar_ulang.aggregate({ 
+          where: { status: 'lunas' }, 
+          _sum: { nominal: true } 
+      }),
     ]);
 
     // --- 5. TRANSAKSI TERBARU (GABUNGAN) ---
+    // (Opsional: Filter transaksi terbaru juga hanya yang lunas, atau biarkan semua status agar admin tau ada yang menunggu)
+    // Di sini saya biarkan semua status agar admin bisa melihat histori transaksi masuk (walaupun pending)
     const [trxP, trxDU] = await Promise.all([
       prisma.tb_pembayaran_pendaftaran.findMany({
         take: 5,
@@ -77,13 +95,15 @@ export async function GET() {
         nominal: t.nominal || 0,
         metode: t.metode_pembayaran,
         nama: t.tb_pendaftaran.nama_lengkap,
+        status: t.status, // Tambahan info status untuk tabel
         tipe: "Pendaftaran"
       })),
       ...trxDU.map(t => ({
         tanggal: t.tanggal_bayar ? new Date(t.tanggal_bayar) : new Date(),
         nominal: t.nominal || 0,
-        metode: t.metode_pembayaran, // Pastikan ini sesuai schema.prisma (metode_bayar/metode_pembayaran)
+        metode: t.metode_pembayaran,
         nama: t.tb_daftar_ulang.tb_pendaftaran.nama_lengkap,
+        status: t.status, // Tambahan info status untuk tabel
         tipe: "Daftar Ulang"
       }))
     ]

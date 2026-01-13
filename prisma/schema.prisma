@@ -44,6 +44,7 @@ model tb_pendaftaran {
   nisn                      String                           @db.VarChar(15)
   jalur_pendaftaran         tb_pendaftaran_jalur_pendaftaran
   tipe_siswa                tb_pendaftaran_tipe_siswa?       @default(regular)
+  status_seleksi            tb_pendaftaran_status_seleksi    @default(proses)
   nama_lengkap              String                           @db.VarChar(100)
   email                     String?                          @db.VarChar(100)
   tempat_lahir              String                           @db.VarChar(50)
@@ -54,18 +55,13 @@ model tb_pendaftaran {
   alamat_rumah              String                           @db.Text
   rt                        String                           @db.VarChar(3)
   rw                        String                           @db.VarChar(3)
+  kode_pos                  String?                          @db.VarChar(10)
   anak_ke                   Int
   jumlah_saudara            Int
   asal_sekolah              String                           @db.VarChar(100)
   alamat_sekolah            String?                          @db.VarChar(255)
   tahun_lulus               Int?                             @db.Year
   kode_pos_sekolah          String                           @db.VarChar(10)
-  nama_prestasi             String?                          @db.VarChar(150)
-  jenis_prestasi            tb_pendaftaran_jenis_prestasi?
-  tingkat                   tb_pendaftaran_tingkat?
-  peringkat                 String?                          @db.VarChar(20)
-  tahun                     Int?                             @db.Year
-  penyelenggara             String?                          @db.VarChar(100)
   nama_ayah                 String                           @db.VarChar(100)
   no_hp_orang_tua           String?                          @db.VarChar(20)
   tempat_lahir_ayah         String                           @db.VarChar(50)
@@ -83,6 +79,7 @@ model tb_pendaftaran {
   updated_at                DateTime                         @default(now()) @db.Timestamp(0)
   tb_daftar_ulang           tb_daftar_ulang[]
   tb_pembayaran_pendaftaran tb_pembayaran_pendaftaran[]
+  tb_prestasi_pendaftar     tb_prestasi_pendaftar[]
 }
 
 model tb_prestasi {
@@ -115,6 +112,7 @@ model tb_siswa {
   alamat                     String                       @db.Text
   rt                         String?                      @db.VarChar(3)
   rw                         String?                      @db.VarChar(3)
+  kode_pos                   String?                      @db.VarChar(10)
   anak_ke                    Int
   jumlah_saudara             Int
   asal_sekolah               String                       @db.VarChar(50)
@@ -141,15 +139,10 @@ model tb_users {
 }
 
 model tb_daftar_ulang {
-  id_daftar_ulang            Int                                @id @default(autoincrement())
+  id_daftar_ulang            Int                          @id @default(autoincrement())
   id_pendaftar               Int
-  tanggal_bayar              DateTime?                          @db.Date
-  jumlah_bayar               Int?
-  metode_pembayaran          tb_daftar_ulang_metode_pembayaran?
-  bukti_pembayaran           String?                            @db.VarChar(255)
-  status_validasi            tb_daftar_ulang_status_validasi?   @default(menunggu)
-  created_at                 DateTime                           @default(now()) @db.Timestamp(0)
-  tb_pendaftaran             tb_pendaftaran                     @relation(fields: [id_pendaftar], references: [id_pendaftar], onUpdate: Restrict, map: "tb_daftar_ulang_ibfk_1")
+  created_at                 DateTime                     @default(now()) @db.Timestamp(0)
+  tb_pendaftaran             tb_pendaftaran               @relation(fields: [id_pendaftar], references: [id_pendaftar], onUpdate: Restrict, map: "tb_daftar_ulang_ibfk_1")
   tb_pembayaran_daftar_ulang tb_pembayaran_daftar_ulang[]
 
   @@index([id_pendaftar], map: "id_pendaftar")
@@ -159,6 +152,9 @@ model tb_jenis_pembayaran {
   id_jenis_pembayaran        Int                          @id @default(autoincrement())
   nama_pembayaran            String                       @db.VarChar(100)
   nominal                    Int
+  status                     tb_jenis_pembayaran_status   @default(aktif)
+  created_at                 DateTime                     @default(now()) @db.Timestamp(0)
+  updated_at                 DateTime                     @default(now()) @db.Timestamp(0)
   tb_pembayaran_daftar_ulang tb_pembayaran_daftar_ulang[]
 }
 
@@ -198,6 +194,20 @@ model tb_pembayaran_pendaftaran {
   tb_pendaftaran       tb_pendaftaran                               @relation(fields: [id_pendaftaran], references: [id_pendaftar], onUpdate: Restrict, map: "tb_pembayaran_pendaftaran_ibfk_1")
 
   @@index([id_pendaftaran], map: "id_pendaftaran")
+}
+
+model tb_prestasi_pendaftar {
+  id_prestasi_pendaftar Int                                   @id @default(autoincrement())
+  id_pendaftar          Int
+  nama_prestasi         String                                @db.VarChar(150)
+  jenis_prestasi        tb_prestasi_pendaftar_jenis_prestasi?
+  tingkat               tb_prestasi_pendaftar_tingkat?
+  peringkat             String?                               @db.VarChar(20)
+  tahun                 Int?                                  @db.Year
+  penyelenggara         String?                               @db.VarChar(100)
+  tb_pendaftaran        tb_pendaftaran                        @relation(fields: [id_pendaftar], references: [id_pendaftar], onDelete: Cascade, map: "fk_pendaftaran_prestasi")
+
+  @@index([id_pendaftar], map: "idx_pendaftar")
 }
 
 enum tb_dokumen_jenis_dokumen {
@@ -246,19 +256,8 @@ enum tb_siswa_tipe_siswa {
   bantuan
 }
 
-enum tb_daftar_ulang_metode_pembayaran {
-  cash
-  transfer
-}
-
 enum tb_users_role {
   admin
-}
-
-enum tb_daftar_ulang_status_validasi {
-  menunggu
-  diterima
-  ditolak
 }
 
 enum tb_pendaftaran_jenis_kelamin {
@@ -300,11 +299,36 @@ enum tb_pendaftaran_tipe_siswa {
   bantuan
 }
 
+enum tb_pendaftaran_status_seleksi {
+  proses
+  diterima
+}
+
+enum tb_prestasi_pendaftar_jenis_prestasi {
+  Akademik
+  Non_Akademik @map("Non Akademik")
+}
+
+enum tb_prestasi_pendaftar_tingkat {
+  Sekolah
+  Kecamatan
+  Kabupaten
+  Provinsi
+  Nasional
+  Internasional
+}
+
+enum tb_jenis_pembayaran_status {
+  aktif
+  non_aktif @map("non-aktif")
+}
+
 enum tb_pembayaran_pendaftaran_status {
   belum
   menunggu
   cicil
   lunas
+  ditolak
 }
 
 enum tb_pembayaran_daftar_ulang_status {
@@ -312,18 +336,5 @@ enum tb_pembayaran_daftar_ulang_status {
   menunggu
   cicil
   lunas
-}
-
-enum tb_pendaftaran_jenis_prestasi {
-  Akademik
-  Non_Akademik @map("Non Akademik")
-}
-
-enum tb_pendaftaran_tingkat {
-  Sekolah
-  Kecamatan
-  Kabupaten
-  Provinsi
-  Nasional
-  Internasional
+  ditolak
 }

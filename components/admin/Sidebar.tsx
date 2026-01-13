@@ -10,7 +10,7 @@ const menuItems = [
   { icon: Users, label: 'Daftar Siswa', href: '/client/admin/DaftarSiswa' },
   { icon: GraduationCap, label: 'PPDB', href: '/client/admin/PPDB' },
   { icon: BanknoteArrowUp, label: 'Pembayaran', href: '/client/admin/pembayaran' },
-  { icon: SquarePlus, label: 'Tambah Data Tagihan', href: '/client/admin/tambahData/tambahDataTagihan' },
+  { icon: SquarePlus, label: 'Tambah Data Tagihan', href: '/client/admin/tambahDataTagihan' },
 ];
 
 export default function Sidebar() {
@@ -34,7 +34,7 @@ export default function Sidebar() {
             PPDB 
           </h1>
           <h1 className="text-[13px] font-bold leading-tight tracking-tight text-white uppercase">
-            PERSIS KUDANG 
+            MA PERSIS KUDANG 
           </h1>
         </div>
       </div>

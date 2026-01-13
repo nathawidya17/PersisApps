@@ -1,20 +1,33 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client"; // Ganti dengan library DB yang kamu pakai
+import { prisma } from "@/lib/prisma";
 
-const prisma = new PrismaClient();
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    // Ambil data dari tb_siswa
-    const siswa = await prisma.tb_siswa.findMany({
-      orderBy: {
-        updated_at: 'desc', // Urutkan dari yang terbaru
-      },
+    const rawSiswa = await prisma.tb_siswa.findMany({
+      orderBy: { updated_at: 'desc' },
+      include: {
+        tb_orang_tua: true
+      }
     });
 
-    return NextResponse.json(siswa);
-  } catch (error) {
-    console.error("Database Error:", error);
-    return NextResponse.json({ message: "Gagal mengambil data siswa" }, { status: 500 });
+    const processedData = rawSiswa.map((siswa) => {
+        return {
+            ...siswa,
+            id: siswa.id_siswa,
+            nama_ayah: siswa.tb_orang_tua[0]?.nama_ayah || "-",
+            nama_ibu: siswa.tb_orang_tua[0]?.nama_ibu || "-",
+            
+            // JANGAN DI OTAK ATIK. 
+            // Ambil apa adanya dari database. Database bilang lunas, ya lunas.
+            status_pembayaran: siswa.status_pembayaran 
+        };
+    });
+
+    return NextResponse.json(processedData);
+
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

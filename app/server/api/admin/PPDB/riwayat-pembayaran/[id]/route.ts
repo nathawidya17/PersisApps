@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -23,25 +21,43 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     // Ambil data pembayaran pendaftaran
     const bayarPendaftaran = await prisma.tb_pembayaran_pendaftaran.findMany({
       where: { id_pendaftaran: id_pendaftar },
+      orderBy: { created_at: 'desc' }
     });
 
     // Ambil data pembayaran daftar ulang
     const daftarUlang = await prisma.tb_daftar_ulang.findFirst({
       where: { id_pendaftar: id_pendaftar },
-      include: { tb_pembayaran_daftar_ulang: true }
+      include: { 
+        tb_pembayaran_daftar_ulang: {
+          orderBy: { created_at: 'desc' }
+        } 
+      }
     });
 
     const bayarDaftarUlang = daftarUlang?.tb_pembayaran_daftar_ulang || [];
 
     // Gabungkan riwayat
     const gabunganRiwayat = [...bayarPendaftaran, ...bayarDaftarUlang]
-      .filter((item: any) => {
-        const itemJenisId = item.id_jenis_pembayaran || 1;
-        return Number(itemJenisId) === Number(id_jenis);
+      .map((item: any) => {
+        const jenisId = item.id_jenis_pembayaran || 1;
+
+        return {
+          id: item.id_bayar_pendaftaran || item.id_pembayaran_daftar_ulang,
+          nominal: item.nominal,
+          status: item.status,
+          bukti_pembayaran: item.bukti_pembayaran,
+          tanggal: item.tanggal_bayar || item.created_at,
+          
+          // --- TAMBAHKAN INI AGAR MUNCUL DI FRONTEND ---
+          metode_pembayaran: item.metode_pembayaran, 
+          // ---------------------------------------------
+
+          jenis_id: jenisId,
+          sumber: item.id_bayar_pendaftaran ? 'pendaftaran' : 'daftar_ulang'
+        };
       })
-      .sort((a: any, b: any) => 
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
+      .filter((item) => Number(item.jenis_id) === Number(id_jenis))
+      .sort((a, b) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime());
 
     return NextResponse.json({ 
       infoTagihan, 

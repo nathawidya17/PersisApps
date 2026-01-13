@@ -1,66 +1,70 @@
+"use client"; // 1. Pastikan ada ini karena pakai hooks
+
 import React from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation'; // 2. Import useRouter
 import Footer from '@/components/user/Footer';
 import Navbar from '@/components/user/Navbar';
 
 export default function LandingPage() {
+  const router = useRouter(); // 3. Inisialisasi router
+
   return (
     <div className="min-h-screen font-sans text-[#333333] bg-white flex flex-col">
       
       {/* --- NAVBAR --- */}
       <Navbar/>
 
-      {/* --- HERO SECTION --- */}
-      {/* Perubahan: min-h-[calc(100vh-80px)] untuk mengisi sisa layar setelah navbar */}
-      <section className="relative w-full min-h-[calc(100vh-67px)] flex items-center bg-white overflow-hidden mb-12">
+      {/* ========================================= */}
+      {/* HERO SECTION                              */}
+      {/* ========================================= */}
+      <section className="relative w-full flex flex-col lg:flex-row items-center bg-white overflow-hidden mb-0 lg:mb-12">
         
-        {/* LAYER 1: BACKGROUND FULL */}
+        {/* BACKGROUND (Desktop & Mobile) */}
         <div className="absolute inset-0 w-full h-full z-0">
           <div className="relative w-full h-full">
             <Image 
               src="/background.png" 
               alt="Gedung MA Persis" 
               fill 
-              className="object-cover object-center lg:object-[center_30%]" // Menyesuaikan fokus gedung
+              className="object-cover object-top lg:object-[center_30%]" 
               priority
             />
-            {/* Gradient Overlay diperhalus untuk menyatu ke putih di sisi kiri */}
-            <div className="absolute inset-0 bg-gradient-to-r from-white via-white/70 to-transparent z-10" />
-            
-            {/* Tambahan: Gradient ke bawah agar transisi ke section profil lebih halus (menghilangkan spot putih) */}
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent to-white/20 z-10" />
+            {/* Gradient Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-b from-white/60 via-white/30 to-transparent lg:bg-gradient-to-r lg:from-white lg:via-white/50 lg:to-transparent z-10" />
           </div>
         </div>
 
-        <div className="container mx-auto px-8 lg:px-24 relative z-20 flex flex-col lg:flex-row items-center justify-between h-full">
+        <div className="container mx-auto px-6 lg:px-24 relative z-20 flex flex-col lg:flex-row items-center justify-between h-full pt-10 lg:pt-0">
           
-          {/* TEXT CONTENT (Sisi Kiri) */}
-          <div className="w-full lg:w-1/2 py-12 lg:py-20">
-            <h1 className="text-5xl font-black leading-tight text-[#0A8F47] lg:text-[72px] tracking-tight">
+          {/* 1. TEXT CONTENT */}
+          <div className="w-full lg:w-1/2 py-4 lg:py-20 text-center lg:text-left flex flex-col items-center lg:items-start">
+            <h1 className="text-[32px] md:text-5xl font-black leading-[1.2] text-[#0A8F47] lg:text-[72px] tracking-tight">
               MA Persis Kudang
             </h1>
-            <p className="mt-6 text-[18px] leading-relaxed text-[#4A4A4A] max-w-lg font-medium">
+            <p className="mt-4 lg:mt-6 text-[14px] md:text-[18px] leading-relaxed text-[#4A4A4A] max-w-[320px] lg:max-w-lg font-medium">
               Lingkungan pendidikan Islami yang membentuk peserta didik berilmu, beriman, dan berakhlakul karimah sebagai bekal masa depan.
             </p>
-            <div className="flex flex-wrap items-center gap-6 mt-10">
-              <button className="px-8 py-3.5 font-bold text-white rounded-md bg-[#0A8F47] shadow-lg hover:shadow-xl transition-all">
+            
+            <div className="flex items-center gap-4 mt-8 lg:mt-10">
+              {/* --- TOMBOL YANG DIUBAH --- */}
+              <button 
+                onClick={() => router.push('/client/user/persyaratanPPDB')}
+                className="px-6 py-3 lg:px-8 lg:py-3.5 font-bold text-white rounded-md bg-[#0A8F47] shadow-lg hover:shadow-xl transition-all text-[13px] lg:text-base cursor-pointer"
+              >
                 Daftar Sekarang
-              </button>
-              <button className="font-bold text-[#B38B40] hover:underline decoration-2 underline-offset-4">
-                Hubungi Kami
               </button>
             </div>
           </div>
           
-          {/* LAYER 2: MODEL (Sisi Kanan) */}
-          {/* Perubahan: Menggunakan flex-1 dan h-full agar menyesuaikan tinggi layar secara dinamis */}
-          <div className="relative w-full lg:w-1/2 self-end h-[500px] md:h-[600px] lg:h-[calc(100vh-68px)] flex items-end justify-center lg:justify-end">
-            <div className="relative w-full h-[90%] lg:h-full lg:w-[110%]">
+          {/* 2. MODEL IMAGE (Siswa) */}
+          <div className="relative w-full lg:w-1/2 flex justify-center items-end mt-8 lg:mt-0 h-[380px] lg:h-[calc(100vh-80px)]">
+            <div className="relative w-[300px] h-[350px] lg:w-[120%] lg:h-full">
               <Image 
                 src="/model.png" 
                 alt="Siswa MA Persis" 
                 fill 
-                className="object-contain object-bottom z-30 -scale-x-100"
+                className="object-contain object-bottom z-30 lg:-scale-x-100 drop-shadow-xl"
                 priority
               />
             </div>
@@ -69,77 +73,83 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* --- PROFIL SEKOLAH (Green Card) --- */}
-      {/* Tambahan: mt-0 atau sedikit negatif jika ingin merapat ke hero agar tidak ada celah */}
-      <section className="px-4 md:px-20 lg:px-10 relative z-2 mt-12 lg:mt-0">
-        <div className="bg-[#0A8F47] rounded-[32px] p-8 lg:p-16 text-white flex flex-col lg:flex-row gap-10 lg:gap-16 items-start overflow-hidden relative shadow-xl">
-          <div className="absolute inset-0 pointer-events-none ">
-             <Image 
-              src="/Container.png" 
-              alt="Pattern Background" 
-              fill 
-              className="object-cover"
-             />
+      {/* ========================================= */}
+      {/* PROFIL SEKOLAH (GREEN CARD)               */}
+      {/* ========================================= */}
+      <section className="px-4 lg:px-10 relative z-10 -mt-6 lg:mt-0 mt-10">
+        
+        {/* GREEN CARD CONTAINER */}
+        <div className="bg-[#0A8F47] rounded-[20px] lg:rounded-[32px] p-6 lg:p-16 text-white flex flex-col lg:flex-row gap-8 lg:gap-16 items-start overflow-hidden relative shadow-[0_10px_40px_-10px_rgba(10,143,71,0.5)]">
+          
+          {/* Pattern Overlay */}
+          <div className="absolute inset-0 pointer-events-none opacity-20 lg:opacity-100">
+             <Image src="/Container.png" alt="Pattern" fill className="object-cover" />
           </div>
 
-          <div className="flex flex-col lg:flex-row gap-10 lg:gap-16 items-start relative z-10">
-  {/* Bagian Kiri: Judul & Subtitle */}
-  <div className="w-full lg:w-[50%] relative z-10 font-sans">
-    <h2 className="leading-[1.1]">
-      {/* Label Profil Sekolah */}
-      <span className="text-lg lg:text-[20px] font-medium block mb-4 tracking-wide text-white/90">
-        Profil Sekolah
-      </span>
+          <div className="flex flex-col lg:flex-row gap-6 lg:gap-16 items-start relative z-10 w-full">
+            
+            {/* Bagian Kiri: Judul */}
+            <div className="w-full lg:w-[50%] relative z-10 font-sans text-left">
+                <span className="text-[13px] lg:text-[20px] font-medium block mb-2 lg:mb-4 tracking-wide text-white/80">
+                    Profil Sekolah
+                </span>
 
-      {/* Teks Utama Bertumpuk */}
-      <span className="relative inline-block text-4xl lg:text-[56px] font-bold text-white leading-[1.2]">
-        Komitmen Kami
-        {/* Dekorasi Garis Kuning */}
-        <span className="absolute left-0 -bottom-2 w-full h-[6px] bg-[#FFD600] rounded-full"></span>
-      </span>
+                <h2 className="leading-[1.15] flex flex-col items-start">
+                    <span className="relative inline-block text-[28px] lg:text-[56px] font-bold text-white">
+                        Komitmen Kami
+                        {/* Garis Kuning */}
+                        <span className="absolute left-0 bottom-1 lg:-bottom-2 w-full h-[3px] lg:h-[6px] bg-[#FFD600] rounded-full"></span>
+                    </span>
 
-      <span className="text-4xl lg:text-[56px] font-bold block text-white mt-4 leading-[1.2]">
-        dalam Memajukan
-      </span>
+                    <span className="text-[28px] lg:text-[56px] font-bold block text-white mt-1 lg:mt-4">
+                        dalam
+                    </span>
+                    <span className="text-[28px] lg:text-[56px] font-bold block text-white">
+                        Memajukan
+                    </span>
+                    <span className="text-[28px] lg:text-[56px] font-bold block text-white">
+                        Pendidikan Islam
+                    </span>
+                </h2>
+            </div>
 
-      <span className="text-4xl lg:text-[56px] font-bold block text-white leading-[1.2]">
-        Islam
-      </span>
-    </h2>
-  </div>
-
-  {/* Bagian Kanan: Deskripsi dengan Align Justify */}
-  <div className="w-full lg:w-[50%] text-[15px] lg:text-[16px] leading-[1.8] font-normal relative z-10 space-y-6 text-justify text-white/90">
-    <p>
-      Pesantren Persis 212 Kudang merupakan lembaga pendidikan Islam berbasis pesantren 
-      yang berlokasi di Desa Wanajaya, Kecamatan Wanaraja, Kabupaten Garut, Jawa Barat. 
-      Pesantren ini mengintegrasikan pendidikan agama Islam dengan pendidikan umum serta 
-      aktif dalam kegiatan dakwah, sosial, dan kemanusiaan.
-    </p>
-    <p>
-      Seiring perkembangannya, Pesantren Persis 212 Kudang terus meningkatkan fasilitas, 
-      sarana pendidikan, dan pemanfaatan teknologi informasi, serta dikenal sebagai lembaga 
-      yang konsisten menjaga nilai-nilai keislaman sekaligus adaptif terhadap perkembangan zaman.
-    </p>
-  </div>
-</div>
+            {/* Bagian Kanan: Deskripsi */}
+            <div className="w-full lg:w-[50%] text-[12px] lg:text-[16px] leading-[1.8] font-normal relative z-10 space-y-4 lg:space-y-6 text-justify text-white/90">
+                <p>
+                Pesantren Persis 212 Kudang merupakan lembaga pendidikan Islam berbasis pesantren 
+                yang berlokasi di Desa Wanajaya, Kecamatan Wanaraja, Kabupaten Garut, Jawa Barat. 
+                Pesantren ini mengintegrasikan pendidikan agama Islam dengan pendidikan umum serta 
+                aktif dalam kegiatan dakwah, sosial, dan kemanusiaan.
+                </p>
+                <p>
+                Seiring perkembangannya, Pesantren Persis 212 Kudang terus meningkatkan fasilitas, 
+                sarana pendidikan, dan pemanfaatan teknologi informasi, serta dikenal sebagai lembaga 
+                yang konsisten menjaga nilai-nilai keislaman sekaligus adaptif terhadap perkembangan zaman.
+                </p>
+            </div>
+          </div>
         </div>
 
-        {/* STATS OVERLAY */}
-        <div className="max-w-5xl mx-auto -mt-14 relative z-30 px-4">
-          <div className="bg-white rounded-2xl shadow-2xl flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-gray-200 overflow-hidden">
+        {/* STATS OVERLAY (FLOATING CARD) */}
+        <div className="max-w-5xl mx-auto -mt-10 lg:-mt-14 relative z-30 px-2 lg:px-4">
+          <div className="bg-white rounded-[16px] lg:rounded-2xl shadow-xl flex flex-row divide-x divide-gray-100 py-4 lg:py-0">
             {[
               { label: 'Siswa Aktif', val: '150', icon: '👥', color: '#0A8F47' },
               { label: 'Pengajar', val: '25', icon: '🏫', color: '#D32F2F' },
               { label: 'Penghargaan', val: '100', icon: '🏆', color: '#F9A825' },
             ].map((stat, i) => (
-              <div key={i} className="flex-1 p-6 lg:p-8 flex items-center justify-center gap-5">
-                <div className="text-4xl lg:text-5xl flex-shrink-0">{stat.icon}</div>
+              <div key={i} className="flex-1 flex flex-col lg:flex-row items-center justify-center gap-1 lg:gap-5 px-1 lg:p-8 text-center lg:text-left">
+                {/* Icon Kecil di Mobile */}
+                <div className="text-xl lg:text-5xl flex-shrink-0 mb-1 lg:mb-0">{stat.icon}</div>
                 <div>
-                  <div className="text-3xl lg:text-5xl font-extrabold" style={{ color: stat.color }}>
-                    {stat.val}<span className="text-2xl lg:text-4xl">+</span>
+                  {/* Angka Besar */}
+                  <div className="text-[16px] lg:text-5xl font-extrabold leading-none" style={{ color: stat.color }}>
+                    {stat.val}<span className="text-[12px] lg:text-4xl text-black/40 lg:text-inherit">+</span>
                   </div>
-                  <div className="text-xs lg:text-sm text-gray-500 font-medium mt-1 uppercase tracking-wider">{stat.label}</div>
+                  {/* Label Kecil */}
+                  <div className="text-[9px] lg:text-sm text-gray-400 font-medium mt-1 uppercase tracking-wider scale-90 lg:scale-100">
+                    {stat.label}
+                  </div>
                 </div>
               </div>
             ))}
@@ -147,26 +157,30 @@ export default function LandingPage() {
         </div>
       </section>
 
-      
-{/* --- BROSUR PPDB SECTION --- */}
-<section className="px-0 py-24 text-center lg:px-0"> 
-  <h2 className="text-4xl font-black text-[#333333] lg:text-5xl px-4">Brosur PPDB</h2>
-  <p className="max-w-2xl mx-auto mt-6 text-[#777777] font-medium text-base px-4">
-    Brosur resmi yang memuat informasi singkat mengenai profil madrasah, program pendidikan, fasilitas, serta penerimaan peserta didik baru.
-  </p>
-  
+      {/* ========================================= */}
+      {/* BROSUR PPDB SECTION                       */}
+      {/* ========================================= */}
+      <section className="px-4 py-16 lg:py-24 text-center lg:px-0"> 
+        <h2 className="text-[28px] lg:text-5xl font-black text-[#333333] mb-3">Brosur PPDB</h2>
+        <p className="max-w-2xl mx-auto text-[#777777] font-medium text-[13px] lg:text-base px-4 leading-relaxed">
+            Brosur resmi yang memuat informasi singkat mengenai profil madrasah, program pendidikan, fasilitas, serta penerimaan peserta didik baru.
+        </p>
+        
+        {/* Gambar Brosur */}
+        <div className="mt-8 lg:mt-16 w-full mx-auto relative flex justify-center">
+            {/* Wrapper width menyesuaikan mobile agar tidak terlalu lebar */}
+            <div className="relative w-full max-w-[320px] lg:max-w-4xl h-[200px] lg:h-[600px] shadow-lg rounded-xl overflow-hidden lg:shadow-none lg:rounded-none lg:overflow-visible">
+               <Image 
+                   src="/brosur.png" 
+                   alt="Brosur PPDB MA Persis Kudang" 
+                   fill 
+                   className="object-contain"
+               />
+            </div>
+        </div>
+      </section>
 
-  <div className="mt-16 w-full mx-auto relative aspect-auto min-h-[600px] md:min-h-[800px] lg:min-h-screen overflow-hidden group">
-     <Image 
-      src="/brosur.png" 
-      alt="Brosur PPDB MA Persis Kudang" 
-      fill 
-      className="object-contain transition-transform duration-500 h"
-      priority
-     />
-  </div>
-</section>
-     <Footer />
+      <Footer />
     </div>
   );
 }
