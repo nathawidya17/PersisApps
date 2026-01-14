@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { normalizeGender } from "@/lib/gender"; 
 
 export async function POST(req: Request) {
   try {
@@ -58,6 +57,15 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Siswa sudah terdaftar." }, { status: 400 });
       }
 
+      // --- PERBAIKAN LOGIC GENDER (SOLUSI ERROR TS) ---
+      // Konversi ke String() agar TypeScript mengizinkan perbandingan dengan string biasa
+      let genderFixed = String(pendaftaran.jenis_kelamin); 
+      
+      if (genderFixed === "Laki-laki" || genderFixed === "Laki laki") {
+          genderFixed = "Laki_laki"; // Format Enum yang diterima Prisma Schema tb_siswa
+      }
+      // -----------------------------------------------
+
       const result = await prisma.$transaction(async (tx) => {
         
         // A. Create Siswa
@@ -70,7 +78,10 @@ export async function POST(req: Request) {
             jalur_pendaftaran: pendaftaran.jalur_pendaftaran as any, 
             tempat_lahir: pendaftaran.tempat_lahir,
             tanggal_lahir: pendaftaran.tanggal_lahir,
-            jenis_kelamin: normalizeGender(pendaftaran.jenis_kelamin) as any || 'Laki-laki',
+            
+            // GUNAKAN VARIABEL YANG SUDAH DI-FIX DAN DI-CAST 'any'
+            jenis_kelamin: genderFixed as any,
+            
             ukuran_baju: pendaftaran.ukuran_baju as any,
             no_hp: pendaftaran.no_hp,
             alamat: pendaftaran.alamat_rumah, 
@@ -85,9 +96,7 @@ export async function POST(req: Request) {
             kode_pos_sekolah: pendaftaran.kode_pos_sekolah ? parseInt(pendaftaran.kode_pos_sekolah) : null,
             status_pembayaran: "belum_lunas",
             
-            // === TAMBAHAN LOGIC HAFALAN ===
             jumlah_hafalan: pendaftaran.jumlah_hafalan,
-            // ==============================
           }
         });
 
