@@ -93,7 +93,6 @@ export async function GET() {
             total_nominal: g.total_nominal,
             jumlah_item: g.total_items,
             status: finalStatus,
-            // Kirim item pertama buat ambil bukti transfer (asumsi 1 upload utk semua)
             bukti_utama: g.items[0]?.bukti || null 
         };
     });
