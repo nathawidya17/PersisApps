@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { normalizeGender } from "@/lib/gender";
 
 export const dynamic = "force-dynamic";
 
@@ -9,7 +10,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     const { id } = await params;
     const idSiswa = Number(id);
     
-    // 1. Ambil Data Siswa
+    // 1. Ambil Data Siswa (Otomatis ambil field jumlah_hafalan dari DB)
     const siswa = await prisma.tb_siswa.findFirst({
       where: { 
         OR: [
@@ -62,7 +63,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         tanggal_lahir_ibu: siswa.tb_orang_tua[0]?.tanggal_lahir_ibu,
         penghasilan_ibu: siswa.tb_orang_tua[0]?.penghasilan_ibu || "",
         
-        alamat_orang_tua: siswa.alamat || "", // Fallback ke alamat siswa
+        alamat_orang_tua: siswa.alamat || "", 
 
         tb_pembayaran_pendaftaran: historyPendaftaran, 
         tb_pembayaran_daftar_ulang: siswa.tb_pembayaran_daftar_ulang
@@ -78,7 +79,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   }
 }
 
-// === PUT: EDIT DATA SISWA & ORANG TUA (INI YANG HILANG TADI) ===
+// === PUT: EDIT DATA SISWA & ORANG TUA ===
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
@@ -89,7 +90,6 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       return NextResponse.json({ error: "ID Invalid" }, { status: 400 });
     }
 
-    // Gunakan Transaction agar update Siswa & Ortu atomik (berhasil bareng/gagal bareng)
     await prisma.$transaction(async (tx) => {
         // 1. Update Data Siswa
         await tx.tb_siswa.update({
@@ -102,7 +102,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
                 alamat: body.alamat,
                 tempat_lahir: body.tempat_lahir,
                 tanggal_lahir: body.tanggal_lahir ? new Date(body.tanggal_lahir) : undefined,
-                jenis_kelamin: body.jenis_kelamin,
+                jenis_kelamin: normalizeGender(body.jenis_kelamin) || body.jenis_kelamin,
                 tipe_siswa: body.tipe_siswa,
                 jalur_pendaftaran: body.jalur_pendaftaran,
                 asal_sekolah: body.asal_sekolah,
@@ -118,8 +118,6 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         });
 
         // 2. Update Data Orang Tua
-        // Kita gunakan updateMany karena relasi di schema prisma one-to-many
-        // walaupun logic aslinya one-to-one.
         await tx.tb_orang_tua.updateMany({
             where: { id_siswa: idSiswa },
             data: {
@@ -149,7 +147,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   }
 }
 
-// === DELETE: HAPUS DATA (Tetap Sama) ===
+// === DELETE: HAPUS DATA ===
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const { id } = await params;

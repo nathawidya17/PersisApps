@@ -128,7 +128,7 @@ export default function DetailPembayaranPage() {
   if (loading) return <div className="ml-64 p-10 flex justify-center"><Loader2 className="animate-spin text-gray-400"/></div>;
 
   return (
-    <div className="ml-64 bg-gray-50 min-h-screen font-sans text-gray-800 relative">
+    <div className="ml-64 bg-gray-100 min-h-screen font-sans text-gray-800 relative ">
       
       {/* --- NOTIFICATION TOAST --- */}
       {notification && (
@@ -160,20 +160,8 @@ export default function DetailPembayaranPage() {
 
       {/* --- HEADER SECTION --- */}
       <div className=" border-b border-gray-100 px-8 py-6 sticky top-0 z-10">
-        <nav className="flex items-center gap-2 text-[11px] font-medium text-gray-400 mb-4">
-            <button onClick={() => router.push('/client/admin/dashboard')} className="hover:text-green-600 transition-colors flex items-center gap-1">
-             Dashboard
-            </button>
-            <Slash size={10} className="-rotate-12 opacity-50"/>
-            <button onClick={() => router.push('/client/admin/pembayaran')} className="hover:text-green-600 transition-colors">
-                Pembayaran
-            </button>
-            <Slash size={10} className="-rotate-12 opacity-50"/>
-            <span className="text-green-600 font-bold  px-2 py-0.5 ">
-                Detail Transaksi
-            </span>
-        </nav>
-
+        
+       <p className="text-[10px] text-gray-400 mb-2 tracking-widest">Pembauaran / <span className="text-green-600">Detail Pembayaran</span></p>
         <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-4">
             <div>
                 <h1 className="text-2xl font-bold text-gray-800 tracking-tight">Rincian Pembayaran</h1>

@@ -76,7 +76,7 @@ export default function EditDetailSiswa() {
           {step === 1 && (
             <div className="grid grid-cols-2 gap-5">
               <FormInput label="Nama Siswa" name="nama_lengkap" value={formData.nama_lengkap} onChange={handleChange} placeholder="Masukkan nama lengkap" />
-              <FormSelect label="Jenis Kelamin" name="jenis_kelamin" value={formData.jenis_kelamin} options={["Putra", "Putri"]} onChange={handleChange} />
+              <FormSelect label="Jenis Kelamin" name="jenis_kelamin" value={formData.jenis_kelamin} options={["Laki-laki", "Perempuan"]} onChange={handleChange} />
               <FormInput label="Anak Ke" name="anak_ke" value={formData.anak_ke} onChange={handleChange} placeholder="Contoh: 1" />
               <FormInput label="Jumlah Saudara" name="jumlah_saudara" value={formData.jumlah_saudara} onChange={handleChange} placeholder="Contoh: 2" />
               <FormInput label="No Handphone" name="no_hp" value={formData.no_hp} onChange={handleChange} placeholder="+62 ..." />

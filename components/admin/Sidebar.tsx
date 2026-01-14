@@ -67,7 +67,7 @@ export default function Sidebar() {
       {/* Footer Sidebar (Optional) */}
       <div className="p-6 border-t border-white/10">
         <p className="text-[10px] text-white/40 text-center uppercase tracking-widest">
-          © 2026 Persis 212 Kudang
+          © 2026 MA PERSIS KUDANG
         </p>
       </div>
     </aside>

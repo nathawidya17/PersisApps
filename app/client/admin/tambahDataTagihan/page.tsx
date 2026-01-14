@@ -219,10 +219,7 @@ export default function PengaturanTagihanPage() {
       {/* Header */}
       <div className="mb-6">
         <div className="flex justify-between items-center">
-          <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-            <span onClick={() => window.history.back()} className="cursor-pointer hover:bg-gray-200 p-1 rounded">←</span> 
-            Detail Tagihan
-          </h1>
+          
           <button 
             onClick={handleOpenAdd}
             className="bg-[#068A50] hover:bg-[#1f4e3a] text-white px-5 py-3 rounded-lg text-xs font-bold flex items-center gap-2 transition-all shadow-md active:scale-95 cursor-pointer"

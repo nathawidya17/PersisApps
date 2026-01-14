@@ -285,7 +285,7 @@ function FormContent() {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <InputGroup label="Nama Siswa" name="nama_lengkap" value={formData.nama_lengkap} onChange={handleChange} />
-                        <SelectGroup label="Jenis Kelamin" name="jenis_kelamin" value={formData.jenis_kelamin} onChange={handleChange} options={["Putra", "Putri"]} />
+                        <SelectGroup label="Jenis Kelamin" name="jenis_kelamin" value={formData.jenis_kelamin} onChange={handleChange} options={["Laki-laki", "Perempuan"]} />
                         <InputGroup label="Tempat Lahir" name="tempat_lahir" value={formData.tempat_lahir} onChange={handleChange} />
                         
                         <DatePickerGroup 

@@ -42,6 +42,7 @@ export default function RegistrationForm() {
   
   const [formData, setFormData] = useState({
     jalur_pendaftaran: "",
+    jumlah_hafalan: "", // <--- TAMBAHAN KHUSUS TAHFIDZ
     nama_lengkap: "", jenis_kelamin: "" as any, tempat_lahir: "", tanggal_lahir: "", anak_ke: "", jumlah_saudara: "",
     no_hp: "", email: "", alamat_rumah: "", rt: "", rw: "", kode_pos: "", ukuran_baju: "" as any,
     asal_sekolah: "", tahun_lulus: "", alamat_sekolah: "", kode_pos_sekolah: "", nisn: "",
@@ -231,14 +232,11 @@ export default function RegistrationForm() {
       }
 
       if (response.ok) {
-  // === TAMBAHKAN KODE INI ===
-  localStorage.setItem('ppdb_success_nama', formData.nama_lengkap);
-  localStorage.setItem('ppdb_success_nisn', formData.nisn || "-");
-  localStorage.setItem('ppdb_success_metode', paymentMethod);
-  // ==========================
-
-  window.location.href = "/client/user/success"; 
-}
+          localStorage.setItem('ppdb_success_nama', formData.nama_lengkap);
+          localStorage.setItem('ppdb_success_nisn', formData.nisn || "-");
+          localStorage.setItem('ppdb_success_metode', paymentMethod);
+          window.location.href = "/client/user/success"; 
+      }
     } catch (error: any) {
       setSubmitError("Koneksi Error: " + error.message);
     } finally {
@@ -319,8 +317,8 @@ export default function RegistrationForm() {
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
               <h3 className="font-bold text-gray-800 mb-5 text-[14px]">Kontak Informasi & Asrama</h3>
               <div className="space-y-4 text-left">
-                <ContactInfo icon={<Mail size={16}/>} text="persiskudang@gmail.com" />
-                <ContactInfo icon={<Phone size={16}/>} text="+62 811-2222-3333" />
+                <ContactInfo icon={<Mail size={16}/>} text="mapersiskudang@gmail.com" />
+                <ContactInfo icon={<Phone size={16}/>} text="+62 851-1704-8212" />
                 <ContactInfo icon={<MapPin size={16}/>} text="Wanaraja, Garut, Jawa Barat 44183" />
               </div>
             </div>
@@ -343,9 +341,22 @@ export default function RegistrationForm() {
                     <div className="md:col-span-2">
                         <SelectGroup label="Jalur Pendaftaran" name="jalur_pendaftaran" value={formData.jalur_pendaftaran} onChange={handleChange} options={["Umum", "Tahfidz", "Prestasi"]} />
                     </div>
-                    {/* Batasi nama 100 karakter */}
                     <InputGroup label="Nama Siswa" name="nama_lengkap" value={formData.nama_lengkap} onChange={handleChange} placeholder="Nama lengkap" maxLength={100} />
-                    <SelectGroup label="Jenis Kelamin" name="jenis_kelamin" value={formData.jenis_kelamin} onChange={handleChange} options={["Laki-laki", "Perempuan"]} />
+                     {/* === TAMBAHAN LOGIC TAHFIDZ === */}
+                    {formData.jalur_pendaftaran === "Tahfidz" && (
+                       <div className="md:col-span-1">
+                          <InputGroup 
+                            label="Jumlah Hafalan (Juz)" 
+                            name="jumlah_hafalan" 
+                            value={formData.jumlah_hafalan} 
+                            onChange={handleChange} 
+                            placeholder="Contoh: 5 Juz" 
+                            maxLength={7} 
+                          />
+                       </div>
+                    )}
+                    {/* ============================== */}
+                    <SelectGroup label="Jenis Kelamin" name="jenis_kelamin" value={formData.jenis_kelamin} onChange={handleChange} options={["Laki laki", "Perempuan"]} />
                     <InputGroup label="Tempat Lahir" name="tempat_lahir" value={formData.tempat_lahir} onChange={handleChange} placeholder="Contoh: Garut" maxLength={50} />
                     
                     <DatePickerGroup 

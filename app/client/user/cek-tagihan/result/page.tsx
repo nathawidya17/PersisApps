@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Search, Filter, CheckCircle2, ChevronDown } from "lucide-react";
 import Navbar from "@/components/user/Navbar";
 import Footer from "@/components/user/Footer";
+import { displayGender } from "@/lib/gender";
 
 // --- HELPERS ---
 const formatDate = (dateString: string) => {
@@ -115,7 +116,7 @@ export default function ResultTagihanPage() {
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-y-8 gap-x-6 ">
                     <InfoItem label="Tempat Tanggal Lahir" value={`${siswa.tempat_lahir || '-'}, ${formatDate(siswa.tanggal_lahir)}`} />
-                    <InfoItem label="Jenis Kelamin" value={siswa.jenis_kelamin || '-'} />
+                    <InfoItem label="Jenis Kelamin" value={displayGender(siswa.jenis_kelamin) || '-'} />
                     <InfoItem label="Anak ke" value={siswa.anak_ke || '-'} />
                     <InfoItem label="Jumlah Saudara" value={siswa.jumlah_saudara || '-'} />
                     <InfoItem label="Jalur Pendaftaran" value={siswa.jalur_pendaftaran || '-'} />

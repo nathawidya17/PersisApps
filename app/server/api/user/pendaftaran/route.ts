@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 
 // --- KONFIGURASI SUPABASE ---
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
   console.error("ERROR: Supabase URL/Key belum diset di .env");
@@ -12,7 +12,6 @@ if (!supabaseUrl || !supabaseKey) {
 
 const supabase = createClient(supabaseUrl!, supabaseKey!);
 
-// --- 1. METHOD GET (Cek NISN) ---
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -30,7 +29,6 @@ export async function GET(req: Request) {
   }
 }
 
-// --- 2. METHOD POST (Submit Data) ---
 export async function POST(req: Request) {
   try {
     const formData = await req.formData();
@@ -52,23 +50,13 @@ export async function POST(req: Request) {
     let fileUrlMySQL = null;
 
     if (file && file.size > 0) {
-      
-      // --- VALIDASI TIPE FILE (HANYA GAMBAR) ---
       const validImageTypes = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
       if (!validImageTypes.includes(file.type)) {
-        return NextResponse.json({ 
-          error: "Hanya file gambar yang boleh diupload (JPG, JPEG, PNG)." 
-        }, { status: 400 });
+        return NextResponse.json({ error: "Hanya file gambar yang boleh diupload." }, { status: 400 });
       }
-
-      // --- VALIDASI UKURAN FILE (MAX 2MB) ---
-      const maxSize = 2 * 1024 * 1024; // 2MB
-      if (file.size > maxSize) {
-        return NextResponse.json({ 
-          error: "Ukuran file terlalu besar. Maksimal 2MB." 
-        }, { status: 400 });
+      if (file.size > 2 * 1024 * 1024) { 
+        return NextResponse.json({ error: "Ukuran file terlalu besar. Maksimal 2MB." }, { status: 400 });
       }
-      // ----------------------------------------
 
       const fileExt = file.name.split('.').pop();
       const fileName = `bukti_${nisn}_${Date.now()}.${fileExt}`;
@@ -86,26 +74,27 @@ export async function POST(req: Request) {
         throw new Error("Gagal upload gambar: " + uploadError.message);
       }
 
-      const { data: urlData } = supabase
-        .storage
-        .from('ppdb_uploads')
-        .getPublicUrl(filePath);
-
+      const { data: urlData } = supabase.storage.from('ppdb_uploads').getPublicUrl(filePath);
       fileUrlMySQL = urlData.publicUrl;
     }
 
     // --- DATA PREPARATION ---
+    
+    // 1. Mapping Jalur
     const jalurMap: Record<string, any> = { "Umum": "umum", "Tahfidz": "tahfidz", "Prestasi": "prestasi" };
+    
+    // 2. Mapping Gender
+    const genderRaw = getVal("jenis_kelamin"); 
+    let fixedGender = genderRaw;
+    if (genderRaw === "Laki-laki" || genderRaw === "Laki laki") {
+        fixedGender = "Laki_laki"; 
+    }
 
+    // 3. Prestasi Parsing
     const prestasiRaw = formData.get("prestasi");
     const prestasiListRaw = prestasiRaw ? JSON.parse(prestasiRaw as string) : [];
-
-    // Filter Data Prestasi
     const validPrestasiData = prestasiListRaw
-      .filter((p: any) => {
-         const name = p.nama || p.nama_prestasi;
-         return name && name.trim() !== "";
-      })
+      .filter((p: any) => p.nama || p.nama_prestasi)
       .map((p: any) => ({
         nama_prestasi: p.nama || p.nama_prestasi,
         jenis_prestasi: p.jenis || p.jenis_prestasi || "Non_Akademik",
@@ -117,17 +106,21 @@ export async function POST(req: Request) {
 
     // --- SIMPAN KE DB (TRANSAKSI) ---
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Create Data Pendaftaran
       const pendaftaran = await tx.tb_pendaftaran.create({
         data: {
-          // A. Data Diri
           nisn: nisn,
           jalur_pendaftaran: jalurMap[getVal("jalur_pendaftaran")] || 'umum',
           nama_lengkap: getVal("nama_lengkap"),
           email: getVal("email"),
           tempat_lahir: getVal("tempat_lahir"),
           tanggal_lahir: getVal("tanggal_lahir") ? new Date(getVal("tanggal_lahir")) : new Date(),
-          jenis_kelamin: getVal("jenis_kelamin") as any,
+          
+          jenis_kelamin: fixedGender as any, 
+          
+          // === TAMBAHAN KHUSUS TAHFIDZ ===
+          jumlah_hafalan: getVal("jumlah_hafalan") || null,
+          // ===============================
+
           ukuran_baju: getVal("ukuran_baju") as any,
           no_hp: getVal("no_hp"),
           alamat_rumah: getVal("alamat_rumah"),
@@ -140,10 +133,8 @@ export async function POST(req: Request) {
           alamat_sekolah: getVal("alamat_sekolah"),
           tahun_lulus: parseInt(getVal("tahun_lulus")) || 0,
           kode_pos_sekolah: getVal("kode_pos_sekolah"),
-
           status_seleksi: 'proses', 
 
-          // B. Data Ortu
           nama_ayah: getVal("nama_ayah"),
           tempat_lahir_ayah: getVal("tempat_lahir_ayah"),
           tanggal_lahir_ayah: getVal("tanggal_lahir_ayah") ? new Date(getVal("tanggal_lahir_ayah")) : new Date(),
@@ -159,14 +150,12 @@ export async function POST(req: Request) {
           penghasilan_ibu: getVal("penghasilan_ibu"),
           no_hp_orang_tua: getVal("no_hp_orang_tua"),
 
-          // C. Data Prestasi
           tb_prestasi_pendaftar: {
             create: validPrestasiData
           }
         },
       });
 
-      // 2. Create Data Pembayaran
       const paymentMethod = getVal("paymentMethod").toLowerCase();
       const nominalClean = parseInt(getVal("jumlah_dibayar").replace(/[^0-9]/g, '')) || 200000;
 

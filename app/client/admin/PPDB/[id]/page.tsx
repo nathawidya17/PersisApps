@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import axios from "axios";
+import { displayGender } from "@/lib/gender";
 import { 
   ChevronLeft, CheckCircle, Info, Gift, 
   Search, Filter, Download, X, Loader2, Check, AlertCircle,
@@ -323,10 +324,26 @@ export default function DetailCalonSiswaPage() {
           </div>
           <div className="grid grid-cols-4 gap-y-8 gap-x-4">
             <InfoItem label="Tempat Tanggal Lahir" value={`${s?.tempat_lahir}, ${s?.tanggal_lahir?.split('T')[0]}`} />
-            <InfoItem label="Jenis Kelamin" value={s?.jenis_kelamin} />
+            <InfoItem label="Jenis Kelamin" value={displayGender(s?.jenis_kelamin)} />
             <InfoItem label="Anak ke" value={s?.anak_ke} />
             <InfoItem label="Jumlah Saudara" value={s?.jumlah_saudara} />
-            <InfoItem label="Jalur Pendaftaran" value={<span className="capitalize">{s?.jalur_pendaftaran}</span>} />
+            
+            {/* === LOGIC MENAMPILKAN HAFALAN KHUSUS TAHFIDZ === */}
+            <InfoItem 
+              label="Jalur Pendaftaran" 
+              value={
+                <div className="flex items-center gap-2">
+                  <span className="capitalize">{s?.jalur_pendaftaran}</span>
+                  {s?.jalur_pendaftaran?.toLowerCase() === "tahfidz" && s?.jumlah_hafalan && (
+                    <span className="bg-green-100 text-green-700 text-[10px] px-2 py-0.5 rounded font-bold">
+                       {s.jumlah_hafalan}
+                    </span>
+                  )}
+                </div>
+              } 
+            />
+            {/* ================================================ */}
+
             <InfoItem label="No Hp" value={s?.no_hp} />
             <InfoItem label="Ukuran Baju" value={s?.ukuran_baju} />
             <InfoItem label="Alamat" value={s?.alamat_rumah} />
@@ -498,7 +515,7 @@ export default function DetailCalonSiswaPage() {
         )}
 
       </div>
-      <footer className="mt-10 text-[11px] text-gray-300 font-semibold text-center tracking-widest uppercase">© PERSIS 212 KUDANG</footer>
+      <footer className="mt-10 text-[11px] text-gray-300 font-semibold text-center tracking-widest uppercase">© MA PERSIS KUDANG</footer>
     </div>
   );
 }
@@ -508,7 +525,7 @@ function InfoItem({ label, value }: { label: string, value: any }) {
   return (
     <div className="flex flex-col gap-1 text-left">
       <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{label}</span>
-      <span className="text-[12px] font-semibold text-gray-700 leading-tight">{value || "-"}</span>
+      <div className="text-[12px] font-semibold text-gray-700 leading-tight">{value || "-"}</div>
     </div>
   );
 }

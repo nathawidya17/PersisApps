@@ -6,6 +6,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   PieChart, Pie, Cell, BarChart, Bar 
 } from "recharts";
+import { displayGender, isMale, genderInitial } from "@/lib/gender";
 import { 
   ClipboardList, UserPlus, GraduationCap, 
   Clock, Wallet, CheckCircle 
@@ -118,7 +119,7 @@ export default function DashboardPage() {
                   paddingAngle={5}
                 >
                   {(data?.gender || []).map((entry: any, index: number) => (
-                    <Cell key={`cell-${index}`} fill={entry.name === "Putra" ? "#4CAF50" : "#FBC02D"} stroke="none" />
+                    <Cell key={`cell-${index}`} fill={isMale(entry.name) ? "#4CAF50" : "#FBC02D"} stroke="none" />
                   ))}
                 </Pie>
                 <Tooltip />
@@ -132,8 +133,8 @@ export default function DashboardPage() {
           <div className="flex justify-center gap-6 mt-4">
             {data?.gender?.map((g: any, i: number) => (
               <div key={i} className="flex items-center gap-2 text-xs text-[#757575]">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: g.name === "Putra" ? "#4CAF50" : "#FBC02D" }} />
-                {g.name}
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: isMale(g.name) ? "#4CAF50" : "#FBC02D" }} />
+                {displayGender(g.name)}
               </div>
             ))}
           </div>
@@ -254,7 +255,7 @@ function TableComponent({ title, items, type }: any) {
                     ) : dataSiswa?.nama_lengkap}
                   </td>
                   <td className="py-4 text-right text-[#2D2D2D] text-xs font-medium">
-                    {isTransaksi ? item.nama : (dataSiswa?.jenis_kelamin?.charAt(0).toUpperCase() || "-")}
+                    {isTransaksi ? item.nama : (genderInitial(dataSiswa?.jenis_kelamin) || "-")}
                   </td>
                 </tr>
               );

@@ -258,7 +258,7 @@ export default function RiwayatTransaksiTagihanPage() {
         </div>
       )}
 
-      <footer className="mt-10 text-[11px] text-gray-300 font-bold text-center tracking-widest uppercase">© PERSIS 212 KUDANG</footer>
+      <footer className="mt-10 text-[11px] text-gray-300 font-bold text-center tracking-widest uppercase">© MA PERSIS KUDANG</footer>
     </div>
   );
 }

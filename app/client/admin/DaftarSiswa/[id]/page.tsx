@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import axios from "axios";
+import { displayGender } from "@/lib/gender";
 import { 
   ChevronLeft, Edit, Trash2, Search, 
   Download, Plus, Info, FileText, FolderOpen, Eye 
@@ -164,10 +165,12 @@ export default function DetailSiswaPage() {
       ["Nama Lengkap", ": " + s.nama_lengkap],
       ["NISN", ": " + (s.NISN || "-")],
       ["Status Siswa", ": " + (s.tipe_siswa || "-")],
+      // EXPORT HAFALAN JUGA
+      s.jalur_pendaftaran === 'tahfidz' ? ["Hafalan", ": " + (s.jumlah_hafalan || "-")] : [],
       ["Tanggal Export", ": " + new Date().toLocaleDateString('id-ID')],
       [""],
       ["RINCIAN TAGIHAN"],
-    ];
+    ].filter(row => row.length > 0);
 
     const tableHeader = [
       ["No", "Nama Tagihan", "Total Tagihan (IDR)", "Sudah Terbayar (IDR)", "Sisa Tagihan (IDR)", "Status"]
@@ -256,10 +259,26 @@ export default function DetailSiswaPage() {
           </div>
           <div className="grid grid-cols-4 gap-y-8 gap-x-4">
             <InfoItem label="Tempat, Tanggal Lahir" value={`${s.tempat_lahir}, ${new Date(s.tanggal_lahir).toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})}`} />
-            <InfoItem label="Jenis Kelamin" value={s.jenis_kelamin} />
+            <InfoItem label="Jenis Kelamin" value={displayGender(s.jenis_kelamin)} />
             <InfoItem label="Anak ke" value={s.anak_ke} />
             <InfoItem label="Jumlah Saudara" value={s.jumlah_saudara} />
-            <InfoItem label="Jalur Pendaftaran" value={<span className="capitalize">{s.jalur_pendaftaran?.replace(/_/g, ' ')}</span>} />
+            
+            {/* === MENAMPILKAN HAFALAN KHUSUS TAHFIDZ === */}
+            <InfoItem 
+              label="Jalur Pendaftaran" 
+              value={
+                <div className="flex items-center gap-2">
+                  <span className="capitalize">{s.jalur_pendaftaran?.replace(/_/g, ' ')}</span>
+                  {s.jalur_pendaftaran?.toLowerCase() === "tahfidz" && s.jumlah_hafalan && (
+                    <span className="bg-green-100 text-green-700 text-[10px] px-2 py-0.5 rounded font-bold">
+                       {s.jumlah_hafalan}
+                    </span>
+                  )}
+                </div>
+              } 
+            />
+            {/* =========================================== */}
+
             <InfoItem label="No Hp" value={s.no_hp} />
             <InfoItem label="Ukuran Baju" value={s.ukuran_baju} />
             <InfoItem label="Alamat Lengkap" value={s.alamat || s.alamat_rumah} />
@@ -277,35 +296,29 @@ export default function DetailSiswaPage() {
         </div>
       </div>
 
-      {/* Parent Info Card (FIXED DATE FORMAT) */}
+      {/* Parent Info Card */}
       <div className="bg-white p-8 rounded-[12px] shadow-sm border border-gray-100 mb-5">
         <h3 className="text-[15px] font-bold text-gray-900 mb-8 tracking-tight uppercase tracking-widest">Data Orang Tua</h3>
         {ortu ? (
             <div className="grid grid-cols-5 gap-y-10 gap-x-4">
             <InfoItem label="Nama Ayah" value={ortu.nama_ayah} />
-            
-            {/* FIX FORMAT TANGGAL DI SINI */}
             <InfoItem 
                 label="TTL Ayah" 
                 value={ortu.tempat_lahir_ayah && ortu.tanggal_lahir_ayah 
                     ? `${ortu.tempat_lahir_ayah}, ${new Date(ortu.tanggal_lahir_ayah).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}` 
                     : "-"} 
             />
-            
             <InfoItem label="Pendidikan" value={ortu.pendidikan_ayah} />
             <InfoItem label="Pekerjaan" value={ortu.pekerjaan_ayah} />
             <InfoItem label="Penghasilan" value={ortu.penghasilan_ayah} />
             
             <InfoItem label="Nama Ibu" value={ortu.nama_ibu} />
-            
-            {/* FIX FORMAT TANGGAL DI SINI JUGA */}
             <InfoItem 
                 label="TTL Ibu" 
                 value={ortu.tempat_lahir_ibu && ortu.tanggal_lahir_ibu 
                     ? `${ortu.tempat_lahir_ibu}, ${new Date(ortu.tanggal_lahir_ibu).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}` 
                     : "-"} 
             />
-            
             <InfoItem label="Pendidikan" value={ortu.pendidikan_ibu} />
             <InfoItem label="Pekerjaan" value={ortu.pekerjaan_ibu} />
             <InfoItem label="Penghasilan" value={ortu.penghasilan_ibu} />

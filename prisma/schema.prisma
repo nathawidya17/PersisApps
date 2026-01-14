@@ -43,6 +43,7 @@ model tb_pendaftaran {
   id_pendaftar              Int                              @id @default(autoincrement())
   nisn                      String                           @db.VarChar(15)
   jalur_pendaftaran         tb_pendaftaran_jalur_pendaftaran
+  jumlah_hafalan            String?                          @db.VarChar(255)
   tipe_siswa                tb_pendaftaran_tipe_siswa?       @default(regular)
   status_seleksi            tb_pendaftaran_status_seleksi    @default(proses)
   nama_lengkap              String                           @db.VarChar(100)
@@ -104,6 +105,7 @@ model tb_siswa {
   tipe_siswa                 tb_siswa_tipe_siswa          @default(reguler)
   status_pembayaran          tb_siswa_status_pembayaran   @default(belum_lunas)
   jalur_pendaftaran          tb_siswa_jalur_pendaftaran
+  jumlah_hafalan             String?                      @db.VarChar(255)
   tempat_lahir               String                       @db.VarChar(50)
   tanggal_lahir              DateTime                     @db.Date
   jenis_kelamin              tb_siswa_jenis_kelamin
@@ -232,11 +234,6 @@ enum tb_prestasi_tingkat {
   Internasional
 }
 
-enum tb_siswa_jenis_kelamin {
-  Putra
-  Putri
-}
-
 enum tb_siswa_ukuran_baju {
   S
   M
@@ -258,11 +255,6 @@ enum tb_siswa_tipe_siswa {
 
 enum tb_users_role {
   admin
-}
-
-enum tb_pendaftaran_jenis_kelamin {
-  Putra
-  Putri
 }
 
 enum tb_pendaftaran_ukuran_baju {
@@ -337,4 +329,14 @@ enum tb_pembayaran_daftar_ulang_status {
   cicil
   lunas
   ditolak
+}
+
+enum tb_pendaftaran_jenis_kelamin {
+  Laki_laki @map("Laki laki")
+  Perempuan
+}
+
+enum tb_siswa_jenis_kelamin {
+  Laki_laki @map("Laki laki")
+  Perempuan
 }

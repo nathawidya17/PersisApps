@@ -12,6 +12,7 @@ import {
   ChevronsRight 
 } from "lucide-react";
 import axios from "axios";
+import { displayGender, isMale } from "@/lib/gender";
 import Link from "next/link";
 import * as XLSX from "xlsx";
 
@@ -52,8 +53,8 @@ export default function PPDBPage() {
         item.nama_lengkap?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.NISN?.includes(searchTerm);
 
-      // 2. Filter Gender (Putra / Putri)
-      const matchGender = filterGender === "Semua" || item.jenis_kelamin === filterGender;
+      // 2. Filter Gender (Laki-laki / Perempuan) — compare normalized display value
+      const matchGender = filterGender === "Semua" || displayGender(item.jenis_kelamin) === filterGender;
 
       // 3. Filter Tahap (Pendaftaran / Daftar Ulang)
       // Note: Pastikan value 'status' di DB konsisten (case-insensitive check)
@@ -81,7 +82,7 @@ export default function PPDBPage() {
     const ws = XLSX.utils.json_to_sheet(filteredData.map(s => ({
       NISN: s.NISN,
       Nama: s.nama_lengkap,
-      Gender: s.jenis_kelamin,
+      Gender: displayGender(s.jenis_kelamin),
       TTL: `${s.tempat_lahir}, ${s.tanggal_lahir}`,
       Tahap: s.status,
       Jalur: s.jalur,
@@ -124,8 +125,8 @@ export default function PPDBPage() {
                 onChange={(e) => setFilterGender(e.target.value)}
               >
                 <option value="Semua">Semua Gender</option>
-                <option value="Putra">Putra</option>
-                <option value="Putri">Putri</option>
+                <option value="Laki-laki">Laki-laki</option>
+                <option value="Perempuan">Perempuan</option>
               </select>
               <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
             </div>
@@ -192,9 +193,9 @@ export default function PPDBPage() {
                   <td className="py-5 px-6 text-[13px] font-normal capitalize">{siswa.nama_lengkap}</td>
                   <td className="py-5 px-6 text-center">
                     <span className={`px-4 py-1 rounded-full text-[11px] font-medium ${
-                      siswa.jenis_kelamin === 'Putra' ? 'bg-indigo-50 text-indigo-500' : 'bg-orange-50 text-orange-500'
+                      isMale(siswa.jenis_kelamin) ? 'bg-indigo-50 text-indigo-500' : 'bg-orange-50 text-orange-500'
                     }`}>
-                      {siswa.jenis_kelamin}
+                      {displayGender(siswa.jenis_kelamin)}
                     </span>
                   </td>
                   <td className="py-5 px-6 text-[12px] font-normal">{siswa.tempat_lahir}, {siswa.tanggal_lahir}</td>
@@ -279,7 +280,7 @@ export default function PPDBPage() {
           </div>
         </div>
       </div>
-      <footer className="mt-8 text-[11px] text-gray-400 uppercase tracking-widest">© Persis 212 Kudang</footer>
+      <footer className="mt-8 text-[11px] text-gray-400 uppercase tracking-widest">© MA PERSIS KUDANG</footer>
     </div>
   );
 }

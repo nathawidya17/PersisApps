@@ -56,14 +56,13 @@ export default function LandingPage() {
           </div>
           
           {/* 2. MODEL IMAGE (Siswa) */}
-          {/* UPDATE: Tinggi gambar di mobile dikurangi jadi h-[300px] biar pas sama min-h-500px */}
-          <div className="relative w-full lg:w-1/2 flex justify-center items-end mt-4 lg:mt-0 h-[320px] lg:h-[764px]">
+          <div className="relative w-full lg:w-1/2 flex justify-center items-end mt-4 lg:mt-0 h-[330px] lg:h-[764px]">
             <div className="relative w-[260px] h-full lg:w-[120%]">
               <Image 
-                src="/model.png" 
+                src="/heroimage.png" 
                 alt="Siswa MA Persis" 
                 fill 
-                className="object-contain object-bottom z-30 lg:-scale-x-100 drop-shadow-xl"
+                className="object-contain object-bottom z-30 drop-shadow-xl"
                 priority
               />
             </div>
@@ -168,14 +167,7 @@ export default function LandingPage() {
     pendidikan, fasilitas, serta penerimaan peserta didik baru.
   </p>
 
-  {/* Gambar Brosur */}
   <div className="mt-8 lg:mt-16 w-full mx-auto relative flex justify-center px-4 lg:px-0">
-    {/* PERUBAHAN DI SINI:
-       1. max-w-[320px] diubah menjadi max-w-lg (lebih lebar di mobile/tablet kecil)
-       2. lg:max-w-4xl diubah menjadi lg:max-w-6xl (jauh lebih lebar di desktop)
-       3. h-[200px] diubah menjadi h-[400px] (lebih tinggi di mobile)
-       4. lg:h-[600px] diubah menjadi lg:h-[800px] (lebih tinggi di desktop agar proporsional)
-    */}
     <div className="relative w-full max-w-lg md:max-w-2xl lg:max-w-6xl h-[400px] md:h-[500px] lg:h-[800px] shadow-lg rounded-xl overflow-hidden lg:shadow-none lg:rounded-none lg:overflow-visible">
       <Image
         src="/brosurr.png"
