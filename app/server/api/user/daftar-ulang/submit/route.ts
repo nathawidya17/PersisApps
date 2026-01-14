@@ -69,7 +69,7 @@ export async function POST(request: Request) {
       // --- PROSES UPLOAD ---
       const fileExt = file.name.split('.').pop();
       const fileName = `bukti_du_${nisn}_${Date.now()}.${fileExt}`;
-      const filePath = `bukti-daftar-ulang/${fileName}`; 
+      const filePath = `bukti-pembayaran-daftar-ulang/${fileName}`; 
 
       const arrayBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);

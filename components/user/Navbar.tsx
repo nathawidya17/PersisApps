@@ -53,7 +53,7 @@ const Navbar = () => {
         <div className="flex items-center justify-between relative">
           
           {/* ======================= */}
-          {/* 1. KIRI: BRAND LOGO     */}
+          {/* 1. KIRI:  LOGO     */}
           {/* ======================= */}
           <Link href="/client/user/landingPage" className="flex items-center gap-3 z-20">
             <div className="relative w-10 h-10">
@@ -64,9 +64,10 @@ const Navbar = () => {
                 className="object-contain"
               />
             </div>
-            <span className="font-bold text-[#0A8F47] text-[13px] tracking-tight uppercase">
-              PERSIS KUDANG 212
-            </span>
+            <div className="flex flex-col">
+                <span className="text-[10px] font-bold text-[#0A8F47]  tracking-widest">PPDB</span>
+                <span className="font-bold text-[#0A8F47] text-[12px] ">PERSIS KUDANG</span>
+              </div>
           </Link>
 
           {/* ======================= */}
@@ -161,13 +162,20 @@ const Navbar = () => {
           {/* Header Mobile Menu */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
             <div className="flex items-center gap-3">
-              <div className="relative w-8 h-8">
-                <Image src="/logopersis.png" alt="Logo" fill className="object-contain" />
+              <Link href="/client/user/landingPage" className="flex items-center gap-3 z-20">
+            <div className="relative w-10 h-10">
+              <Image 
+                src="/logopersis.png" 
+                alt="Logo Persis Kudang" 
+                fill 
+                className="object-contain"
+              />
+            </div>
+            <div className="flex flex-col">
+                <span className="text-[10px] font-bold text-[#0A8F47]  tracking-widest">PPDB</span>
+                <span className="font-bold text-[#0A8F47] text-[12px] ">PERSIS KUDANG</span>
               </div>
-              <div className="flex flex-col">
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">PPDB</span>
-                <span className="font-bold text-[#0A8F47] text-[12px] uppercase">PERSIS KUDANG</span>
-              </div>
+          </Link>
             </div>
             <button onClick={() => setIsMobileMenuOpen(false)} className="text-gray-500 p-1 hover:bg-gray-100 rounded-full">
               <X size={24} />

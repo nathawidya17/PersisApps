@@ -15,39 +15,37 @@ export default function LandingPage() {
       {/* --- NAVBAR --- */}
       <Navbar/>
 
-      {/* ========================================= */}
+    {/* ========================================= */}
       {/* HERO SECTION                              */}
       {/* ========================================= */}
-      <section className="relative w-full flex flex-col lg:flex-row items-center bg-white overflow-hidden mb-0 lg:mb-12">
+      <section className="relative w-full min-h-[600px] lg:min-h-[764px] flex flex-col lg:flex-row items-center bg-white overflow-hidden mb-0 lg:mb-12">
         
-        {/* BACKGROUND (Desktop & Mobile) */}
+        {/* BACKGROUND */}
         <div className="absolute inset-0 w-full h-full z-0">
           <div className="relative w-full h-full">
             <Image 
               src="/background.png" 
               alt="Gedung MA Persis" 
               fill 
-              className="object-cover object-top lg:object-[center_30%]" 
+              className="object-cover object-[43%_center]" 
               priority
             />
-            {/* Gradient Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-b from-white/60 via-white/30 to-transparent lg:bg-gradient-to-r lg:from-white lg:via-white/50 lg:to-transparent z-10" />
+            
           </div>
         </div>
 
         <div className="container mx-auto px-6 lg:px-24 relative z-20 flex flex-col lg:flex-row items-center justify-between h-full pt-10 lg:pt-0">
           
           {/* 1. TEXT CONTENT */}
-          <div className="w-full lg:w-1/2 py-4 lg:py-20 text-center lg:text-left flex flex-col items-center lg:items-start">
-            <h1 className="text-[32px] md:text-5xl font-black leading-[1.2] text-[#0A8F47] lg:text-[72px] tracking-tight">
+          <div className="w-full lg:w-1/2 py-8 lg:py-20 text-center lg:text-left flex flex-col items-center lg:items-start">
+            <h1 className="text-[32px] md:text-5xl font-black leading-[1.2] text-[#0A8F47] lg:text-[72px] tracking-tight ">
               MA Persis Kudang
             </h1>
             <p className="mt-4 lg:mt-6 text-[14px] md:text-[18px] leading-relaxed text-[#4A4A4A] max-w-[320px] lg:max-w-lg font-medium">
               Lingkungan pendidikan Islami yang membentuk peserta didik berilmu, beriman, dan berakhlakul karimah sebagai bekal masa depan.
             </p>
             
-            <div className="flex items-center gap-4 mt-8 lg:mt-10">
-              {/* --- TOMBOL YANG DIUBAH --- */}
+            <div className="flex items-center gap-4 mt-6 lg:mt-10">
               <button 
                 onClick={() => router.push('/client/user/persyaratanPPDB')}
                 className="px-6 py-3 lg:px-8 lg:py-3.5 font-bold text-white rounded-md bg-[#0A8F47] shadow-lg hover:shadow-xl transition-all text-[13px] lg:text-base cursor-pointer"
@@ -58,8 +56,9 @@ export default function LandingPage() {
           </div>
           
           {/* 2. MODEL IMAGE (Siswa) */}
-          <div className="relative w-full lg:w-1/2 flex justify-center items-end mt-8 lg:mt-0 h-[380px] lg:h-[calc(100vh-80px)]">
-            <div className="relative w-[300px] h-[350px] lg:w-[120%] lg:h-full">
+          {/* UPDATE: Tinggi gambar di mobile dikurangi jadi h-[300px] biar pas sama min-h-500px */}
+          <div className="relative w-full lg:w-1/2 flex justify-center items-end mt-4 lg:mt-0 h-[300px] lg:h-[764px]">
+            <div className="relative w-[260px] h-full lg:w-[120%]">
               <Image 
                 src="/model.png" 
                 alt="Siswa MA Persis" 
@@ -72,7 +71,7 @@ export default function LandingPage() {
 
         </div>
       </section>
-
+      
       {/* ========================================= */}
       {/* PROFIL SEKOLAH (GREEN CARD)               */}
       {/* ========================================= */}

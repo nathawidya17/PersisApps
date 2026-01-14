@@ -72,7 +72,7 @@ export async function POST(req: Request) {
 
       const fileExt = file.name.split('.').pop();
       const fileName = `bukti_${nisn}_${Date.now()}.${fileExt}`;
-      const filePath = `bukti-pembayaran/${fileName}`;
+      const filePath = `bukti-pembayaran-pendaftaran/${fileName}`;
 
       const arrayBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);

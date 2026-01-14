@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { 
   Search, Plus, Download, MoreHorizontal, 
-  X, Edit2, Trash2 
+  X, Edit2, Trash2, Check, AlertCircle, Loader2 
 } from "lucide-react";
 import * as XLSX from "xlsx";
 
@@ -14,7 +14,7 @@ interface Tagihan {
   nama_pembayaran: string;
   nominal: number;
   status: string; // 'aktif' | 'nonaktif'
-  updated_at?: string; // Boleh kosong
+  updated_at?: string; 
 }
 
 export default function PengaturanTagihanPage() {
@@ -28,6 +28,12 @@ export default function PengaturanTagihanPage() {
   const [showConfirmSave, setShowConfirmSave] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
 
+  // State Notification (Toast)
+  const [notification, setNotification] = useState<{
+    message: string;
+    type: "success" | "error";
+  } | null>(null);
+
   // State Form
   const [isEditMode, setIsEditMode] = useState(false);
   const [formData, setFormData] = useState({
@@ -37,14 +43,19 @@ export default function PengaturanTagihanPage() {
     status: true // Default ON
   });
 
+  // --- HELPER: Show Notification ---
+  const showNotification = (message: string, type: "success" | "error") => {
+    setNotification({ message, type });
+    // Hilang otomatis setelah 3 detik
+    setTimeout(() => setNotification(null), 4000);
+  };
+
   // --- FETCH DATA ---
   const fetchData = async () => {
     try {
-      setLoading(true);
+      // setLoading(true); // Opsional: matikan loading biar interaksi lebih smooth saat refresh
       const res = await axios.get("/server/api/admin/tambahDataTagihan");
       
-      // Normalisasi Data: Pastikan status ada nilainya.
-      // Jika kosong/null, kita anggap 'aktif' (ON) agar default nyala semua.
       const normalizedData = res.data.map((item: any) => ({
         ...item,
         status: item.status || "aktif" 
@@ -53,6 +64,7 @@ export default function PengaturanTagihanPage() {
       setData(normalizedData);
     } catch (error) {
       console.error(error);
+      showNotification("Gagal memuat data", "error");
     } finally {
       setLoading(false);
     }
@@ -66,7 +78,7 @@ export default function PengaturanTagihanPage() {
   
   const handleOpenAdd = () => {
     setIsEditMode(false);
-    setFormData({ id: 0, nama: "", value: "", status: true }); // Default status true (ON)
+    setFormData({ id: 0, nama: "", value: "", status: true });
     setShowModalForm(true);
     setMenuOpenId(null);
   };
@@ -77,7 +89,6 @@ export default function PengaturanTagihanPage() {
       id: item.id_jenis_pembayaran,
       nama: item.nama_pembayaran,
       value: item.nominal.toString(),
-      // Konversi String Backend ke Boolean Frontend
       status: item.status === "aktif"
     });
     setShowModalForm(true);
@@ -85,14 +96,16 @@ export default function PengaturanTagihanPage() {
   };
 
   const handlePreSave = () => {
-    if(!formData.nama || !formData.value) return alert("Mohon lengkapi data");
+    if(!formData.nama || !formData.value) {
+        showNotification("Mohon lengkapi Nama dan Nominal tagihan", "error");
+        return;
+    }
     setShowModalForm(false);
     setShowConfirmSave(true);
   };
 
   const handleSave = async () => {
     try {
-      // Konversi Boolean Frontend ke String Backend
       const payload = {
         nama_pembayaran: formData.nama,
         nominal: parseInt(formData.value),
@@ -101,15 +114,18 @@ export default function PengaturanTagihanPage() {
 
       if (isEditMode) {
         await axios.put(`/server/api/admin/tambahDataTagihan/${formData.id}`, payload);
+        showNotification("Data berhasil diperbarui!", "success");
       } else {
         await axios.post("/server/api/admin/tambahDataTagihan", payload);
+        showNotification("Data berhasil ditambahkan!", "success");
       }
 
       setShowConfirmSave(false);
       fetchData(); 
     } catch (error) {
       console.error(error);
-      alert("Gagal menyimpan data");
+      setShowConfirmSave(false);
+      showNotification("Gagal menyimpan data.", "error");
     }
   };
 
@@ -122,18 +138,25 @@ export default function PengaturanTagihanPage() {
   const handleDelete = async () => {
     try {
       await axios.delete(`/server/api/admin/tambahDataTagihan/${formData.id}`);
+      
       setShowConfirmDelete(false);
       fetchData();
-    } catch (error) {
-      alert("Gagal menghapus data");
+      showNotification("Data berhasil dihapus!", "success");
+
+    } catch (error: any) {
+      console.error(error);
+      setShowConfirmDelete(false);
+      
+      // Ambil pesan error spesifik dari backend (soal Foreign Key)
+      const errorMsg = error.response?.data?.error || "Gagal menghapus data";
+      showNotification(errorMsg, "error");
     }
   };
 
-  // Logic Toggle Langsung di Tabel
   const handleToggleStatus = async (item: Tagihan) => {
     const newStatusString = item.status === "aktif" ? "non_aktif" : "aktif";
     
-    // Optimistic Update: Update UI duluan biar cepat
+    // Optimistic Update
     const updatedData = data.map(d => 
       d.id_jenis_pembayaran === item.id_jenis_pembayaran ? {...d, status: newStatusString} : d
     );
@@ -143,9 +166,11 @@ export default function PengaturanTagihanPage() {
       await axios.put(`/server/api/admin/tambahDataTagihan/${item.id_jenis_pembayaran}`, {
         status: newStatusString
       });
+      // Tidak perlu notif sukses untuk toggle biar gak berisik, visual switch sudah cukup
     } catch (error) {
       console.error("Gagal update status", error);
-      fetchData(); // Revert/Refresh jika gagal
+      fetchData(); // Revert
+      showNotification("Gagal mengubah status.", "error");
     }
   };
 
@@ -161,8 +186,36 @@ export default function PengaturanTagihanPage() {
   );
 
   return (
-    <div className="ml-64 p-6 bg-gray-100 min-h-screen font-sans text-[#333]">
+    <div className="ml-64 p-6 bg-gray-100 min-h-screen font-sans text-[#333] relative">
       
+      {/* --- NOTIFICATION TOAST --- */}
+      {notification && (
+        <div className="fixed top-24 right-10 z-[999999] animate-in fade-in slide-in-from-right duration-300">
+            <div className={`flex items-center gap-3 px-5 py-4 rounded-xl shadow-xl border bg-white ${
+                notification.type === "success" ? "border-green-100" : "border-red-100"
+            }`}>
+                <div className={`p-2 rounded-full ${
+                    notification.type === "success" ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"
+                }`}>
+                    {notification.type === "success" ? <Check size={18} strokeWidth={3} /> : <AlertCircle size={18} strokeWidth={3} />}
+                </div>
+                <div>
+                    <h4 className={`text-xs font-bold uppercase tracking-wider mb-0.5 ${
+                        notification.type === "success" ? "text-green-600" : "text-red-600"
+                    }`}>
+                        {notification.type === "success" ? "Berhasil" : "Gagal"}
+                    </h4>
+                    <p className="text-[13px] font-medium text-gray-600 max-w-[250px] leading-tight">
+                        {notification.message}
+                    </p>
+                </div>
+                <button onClick={() => setNotification(null)} className="ml-4 text-gray-400 hover:text-gray-600">
+                    <X size={16} />
+                </button>
+            </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-6">
         <div className="flex justify-between items-center">
@@ -172,7 +225,7 @@ export default function PengaturanTagihanPage() {
           </h1>
           <button 
             onClick={handleOpenAdd}
-            className="bg-[#068A50ic] hover:bg-[#1f4e3a] text-white px-5 py-3 rounded-lg text-xs font-bold flex items-center gap-2 transition-all shadow-md active:scale-95"
+            className="bg-[#068A50] hover:bg-[#1f4e3a] text-white px-5 py-3 rounded-lg text-xs font-bold flex items-center gap-2 transition-all shadow-md active:scale-95 cursor-pointer"
           >
             <Plus size={16} /> Tambah Data
           </button>
@@ -211,7 +264,7 @@ export default function PengaturanTagihanPage() {
           </div>
           <button 
             onClick={handleExport}
-            className="flex items-center gap-2 px-4 py-2.5 border border-gray-300 rounded-lg text-xs font-bold text-gray-600 hover:bg-gray-50 transition-all"
+            className="flex items-center gap-2 px-4 py-2.5 border border-gray-300 rounded-lg text-xs font-bold text-gray-600 hover:bg-gray-50 transition-all cursor-pointer"
           >
             <Download size={16} /> Export Data
           </button>
@@ -230,9 +283,9 @@ export default function PengaturanTagihanPage() {
           </thead>
           <tbody className="text-[12px] text-gray-600 divide-y divide-gray-50">
             {loading ? (
-              <tr><td colSpan={5} className="text-center py-10">Memuat data...</td></tr>
+              <tr><td colSpan={5} className="text-center py-20 text-gray-400 font-medium"><Loader2 className="animate-spin inline mr-2"/> Memuat data...</td></tr>
             ) : filteredData.length === 0 ? (
-               <tr><td colSpan={5} className="text-center py-10">Data tidak ditemukan</td></tr>
+               <tr><td colSpan={5} className="text-center py-20 text-gray-400 font-medium">Data tidak ditemukan</td></tr>
             ) : (
               filteredData.map((item) => (
                 <tr key={item.id_jenis_pembayaran} className="hover:bg-gray-50/50 transition-colors">
@@ -248,7 +301,6 @@ export default function PengaturanTagihanPage() {
                     </button>
                   </td>
                   <td className="px-6 py-4 text-gray-400">
-                    {/* Handling Tanggal: Jika ada tampilkan, jika tidak tampilkan "-" */}
                     {item.updated_at 
                       ? new Date(item.updated_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
                       : "-"

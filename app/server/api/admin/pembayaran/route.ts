@@ -1,65 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-export const dynamic = "force-dynamic";
-
-// --- HELPER: FUNGSI HITUNG ULANG STATUS SISWA ---
-// Fungsi ini akan dipanggil setiap kali ada perubahan data pembayaran
-async function recalculateStudentStatus(nisn: string | null, id_siswa: number | null) {
-  if (!nisn && !id_siswa) return;
-
-  // 1. Cari Siswa untuk dapatkan ID dan NISN yang lengkap
-  const siswa = await prisma.tb_siswa.findFirst({
-    where: {
-      OR: [
-        { id_siswa: id_siswa || 0 },
-        { NISN: nisn || "" }
-      ]
-    }
-  });
-
-  if (!siswa) return;
-
-  // 2. Hitung TARGET TAGIHAN (Dinamis: Mengambil semua tagihan AKTIF)
-  const jenisTagihan = await prisma.tb_jenis_pembayaran.findMany({ where: { status: 'aktif' } });
-  const TARGET_TAGIHAN = 200000 + jenisTagihan.reduce((total, item) => total + item.nominal, 0);
-
-  // 3. Hitung TOTAL UANG MASUK (Hanya yang statusnya 'lunas')
-  
-  // A. Dari Pendaftaran
-  const bayarPend = await prisma.tb_pembayaran_pendaftaran.aggregate({
-    _sum: { nominal: true },
-    where: {
-      status: 'lunas',
-      tb_pendaftaran: { nisn: siswa.NISN }
-    }
-  });
-
-  // B. Dari Daftar Ulang
-  const bayarDU = await prisma.tb_pembayaran_daftar_ulang.aggregate({
-    _sum: { nominal: true },
-    where: {
-      status: 'lunas',
-      id_siswa: siswa.id_siswa
-    }
-  });
-
-  const totalMasuk = (bayarPend._sum.nominal || 0) + (bayarDU._sum.nominal || 0);
-
-  // 4. Update Status Siswa (Real-time Comparison)
-  const statusFinal = totalMasuk >= TARGET_TAGIHAN ? 'lunas' : 'belum_lunas';
-
-  // Hanya update database jika statusnya berbeda (biar hemat resource)
-  if (siswa.status_pembayaran !== statusFinal) {
-    await prisma.tb_siswa.update({
-      where: { id_siswa: siswa.id_siswa },
-      data: { status_pembayaran: statusFinal }
-    });
-  }
-}
-
-
-// --- GET METHOD (Tidak Berubah) ---
+// GET (TETAP SAMA)
 export async function GET() {
   try {
     const pendaftaran = await prisma.tb_pembayaran_pendaftaran.findMany({
@@ -89,7 +31,7 @@ export async function GET() {
         NISN: p.tb_pendaftaran?.nisn || "-",
         nama_siswa: p.tb_pendaftaran?.nama_lengkap || "Tanpa Nama",
         tagihan: "Biaya Pendaftaran",
-        nominal_tagihan: 200000, 
+        nominal_tagihan: 200000, // Display only, gak ngaruh ke logic lunas
         nominal: p.nominal, 
         status: p.status === 'ditolak' ? 'Rejected' : (p.status === 'lunas' ? 'Approved' : 'Need Approval'),
         status_db: p.status,
@@ -120,88 +62,91 @@ export async function GET() {
   }
 }
 
-// --- PATCH METHOD (Update Status & Recalculate) ---
+// PATCH: LOGIC PENENTU STATUS (FIXED: HAPUS 200K HARDCODE)
 export async function PATCH(request: Request) {
   try {
     const { id, type, status, id_user_admin } = await request.json();
     
-    let adminName = "Admin";
-    if(id_user_admin) {
-        const u = await prisma.tb_users.findUnique({where: {id_user: Number(id_user_admin)}});
-        if(u) adminName = u.nama;
+    let adminRealName = "System Admin";
+    if (id_user_admin) {
+      const admin = await prisma.tb_users.findUnique({ where: { id_user: Number(id_user_admin) } });
+      if (admin) adminRealName = admin.nama;
     }
 
     const targetStatus = status === "Approved" ? "lunas" : (status === "Rejected" ? "ditolak" : "belum");
-    
-    // Variabel untuk menyimpan identitas siswa agar bisa dihitung ulang
-    let nisn = null;
-    let id_siswa = null;
+    let nisnSiswa = "";
 
+    // 1. Update Status Transaksi
     if (type === "Pendaftaran") {
       const updated = await prisma.tb_pembayaran_pendaftaran.update({
         where: { id_bayar_pendaftaran: Number(id) },
-        data: { status: targetStatus, approved_by: adminName },
+        data: { status: targetStatus, approved_by: adminRealName },
         include: { tb_pendaftaran: true }
       });
-      nisn = updated.tb_pendaftaran?.nisn;
+      nisnSiswa = updated.tb_pendaftaran?.nisn;
     } else {
       const updated = await prisma.tb_pembayaran_daftar_ulang.update({
         where: { id_pembayaran_daftar_ulang: Number(id) },
-        data: { status: targetStatus, approved_by: adminName },
+        data: { status: targetStatus, approved_by: adminRealName },
         include: { tb_siswa: true }
       });
-      id_siswa = updated.id_siswa;
-      nisn = updated.tb_siswa?.NISN || null;
+      nisnSiswa = updated.tb_siswa?.NISN || "";
     }
 
-    // TRIGGER RECALCULATE
-    await recalculateStudentStatus(nisn, id_siswa);
+    // 2. LOGIKA UPDATE STATUS (FIXED)
+    if (nisnSiswa) {
+        console.log(`\n--- CEK STATUS (REVISI) UNTUK NISN: ${nisnSiswa} ---`);
 
-    return NextResponse.json({ message: "Updated" });
+        // A. Hitung Total Tagihan Wajib
+        // HAPUS "200000 +" DARI SINI. KITA MURNI AMBIL DARI DATABASE TAGIHAN.
+        const jenisTagihan = await prisma.tb_jenis_pembayaran.findMany({ where: { status: 'aktif' } });
+        const totalTagihanWajib = jenisTagihan.reduce((acc, curr) => acc + curr.nominal, 0);
+        
+        console.log(`1. Total Tagihan DB: Rp ${totalTagihanWajib.toLocaleString()}`);
+
+        // B. Hitung Uang Masuk Pendaftaran
+        const pendaftaran = await prisma.tb_pembayaran_pendaftaran.findFirst({
+            where: { tb_pendaftaran: { nisn: nisnSiswa }, status: 'lunas' }
+        });
+        const bayarPend = pendaftaran ? pendaftaran.nominal : 0;
+
+        // C. Hitung Uang Masuk Daftar Ulang
+        const daftarUlang = await prisma.tb_pembayaran_daftar_ulang.aggregate({
+            where: { tb_siswa: { NISN: nisnSiswa }, status: 'lunas' },
+            _sum: { nominal: true }
+        });
+        const bayarDU = daftarUlang._sum.nominal || 0;
+
+        const totalBayar = bayarPend + bayarDU;
+        console.log(`2. Total Bayar (Pend+DU): Rp ${totalBayar.toLocaleString()}`);
+
+        // D. Tentukan Status
+        // Kita pakai toleransi >= karena mungkin ada kelebihan bayar sedikit
+        const statusAkhir = totalBayar >= totalTagihanWajib ? 'lunas' : 'belum_lunas';
+        
+        console.log(`3. Hasil: ${totalBayar} >= ${totalTagihanWajib} ? ${statusAkhir.toUpperCase()}`);
+
+        // E. Update Database
+        await prisma.tb_siswa.update({
+            where: { NISN: nisnSiswa },
+            data: { status_pembayaran: statusAkhir }
+        });
+    }
+
+    const msg = status === "Approved" ? `Disetujui oleh ${adminRealName}` : `Ditolak`;
+    return NextResponse.json({ message: msg });
   } catch (error: any) {
+    console.error("ERROR PATCH:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
-// --- DELETE METHOD (Delete & Recalculate) ---
+// DELETE (Tetap)
 export async function DELETE(request: Request) {
-    try {
-        const { id, type } = await request.json();
-        
-        let nisn = null;
-        let id_siswa = null;
-
-        // 1. Ambil Data Dulu Sebelum Dihapus (Supaya tau siapa yang punya)
-        if (type === "Pendaftaran") {
-            const data = await prisma.tb_pembayaran_pendaftaran.findUnique({
-                where: { id_bayar_pendaftaran: Number(id) },
-                include: { tb_pendaftaran: true }
-            });
-            if(data) nisn = data.tb_pendaftaran?.nisn;
-            
-            // Hapus Data
-            await prisma.tb_pembayaran_pendaftaran.delete({ where: { id_bayar_pendaftaran: Number(id) } });
-
-        } else {
-            const data = await prisma.tb_pembayaran_daftar_ulang.findUnique({
-                where: { id_pembayaran_daftar_ulang: Number(id) },
-                include: { tb_siswa: true }
-            });
-            if(data) {
-                id_siswa = data.id_siswa;
-                nisn = data.tb_siswa?.NISN || null;
-            }
-
-            // Hapus Data
-            await prisma.tb_pembayaran_daftar_ulang.delete({ where: { id_pembayaran_daftar_ulang: Number(id) } });
-        }
-
-        // 2. TRIGGER RECALCULATE SETELAH HAPUS
-        // Jika tadinya LUNAS, lalu satu pembayaran dihapus, maka fungsi ini akan mendeteksi uang kurang dan mengubah jadi BELUM LUNAS.
-        await recalculateStudentStatus(nisn, id_siswa);
-
-        return NextResponse.json({ message: "Deleted" });
-    } catch(e:any){ 
-        return NextResponse.json({error:e.message},{status:500}); 
-    }
+  try {
+    const { id, type } = await request.json();
+    if (type === "Pendaftaran") await prisma.tb_pembayaran_pendaftaran.delete({ where: { id_bayar_pendaftaran: Number(id) } });
+    else await prisma.tb_pembayaran_daftar_ulang.delete({ where: { id_pembayaran_daftar_ulang: Number(id) } });
+    return NextResponse.json({ message: "Deleted" });
+  } catch (e: any) { return NextResponse.json({ error: e.message }, { status: 500 }); }
 }

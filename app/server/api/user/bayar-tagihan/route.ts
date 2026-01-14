@@ -17,39 +17,38 @@ export async function POST(req: Request) {
     const formData = await req.formData();
     
     // --- AMBIL DATA ---
-    const id_siswa = formData.get("id_siswa")?.toString();
+    const id_input = formData.get("id_siswa")?.toString(); // Bisa ID Siswa atau ID Pendaftar
     const metode = formData.get("metode")?.toString();
-    const bank = formData.get("bank")?.toString();
     const pengirim = formData.get("pengirim")?.toString();
-    // nominal_bayar global (total semua) tidak kita pakai di loop, tapi bisa buat validasi kalau mau
-    const nominal_bayar_global = formData.get("nominal_bayar")?.toString(); 
     const itemsRaw = formData.get("items")?.toString();
     const file = formData.get("bukti") as File | null;
 
-    if (!id_siswa || id_siswa === "undefined") {
-      return NextResponse.json({ error: "ID Siswa tidak valid." }, { status: 400 });
+    if (!id_input || id_input === "undefined") {
+      return NextResponse.json({ error: "ID Siswa/Pendaftar tidak valid." }, { status: 400 });
     }
 
     const items = JSON.parse(itemsRaw || "[]");
     let buktiUrl = null;
 
-    // --- LOGIC UPLOAD & VALIDASI FILE ---
+    // --- LOGIC UPLOAD FILE (TRANSFER) ---
     if (metode === 'transfer') {
         if (!file || file.size === 0) {
-            return NextResponse.json({ error: "Wajib upload bukti pembayaran untuk metode Transfer." }, { status: 200 });
+            return NextResponse.json({ error: "Wajib upload bukti pembayaran untuk metode Transfer." }, { status: 400 });
         }
 
-        const validTypes = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
-        if (!validTypes.includes(file.type)) {
-            return NextResponse.json({ error: "Hanya file gambar yang boleh diupload (JPG, PNG)." }, { status: 200 });
+        const validImageTypes = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
+        if (!validImageTypes.includes(file.type)) {
+            return NextResponse.json({ error: "Hanya file gambar yang boleh diupload (JPG, PNG)." }, { status: 400 });
         }
 
-        if (file.size > 2 * 1024 * 1024) {
-            return NextResponse.json({ error: "Ukuran file terlalu besar. Maksimal 2MB." }, { status: 200 });
+        const maxSize = 2 * 1024 * 1024;
+        if (file.size > maxSize) {
+            return NextResponse.json({ error: "Ukuran file terlalu besar. Maksimal 2MB." }, { status: 400 });
         }
 
         const fileExt = file.name.split('.').pop();
-        const fileName = `bukti_${id_siswa}_${Date.now()}.${fileExt}`;
+        const fileName = `bukti_du_${id_input}_${Date.now()}.${fileExt}`;
+        const filePath = `bukti-pembayaran-daftar-ulang/${fileName}`; 
         const bucketName = 'ppdb_uploads'; 
 
         const arrayBuffer = await file.arrayBuffer();
@@ -57,47 +56,77 @@ export async function POST(req: Request) {
 
         const { error: uploadError } = await supabase.storage
             .from(bucketName)
-            .upload(fileName, buffer, { contentType: file.type, upsert: false });
+            .upload(filePath, buffer, { contentType: file.type, upsert: false });
 
         if (uploadError) {
             console.error("Upload Error:", uploadError);
             throw new Error("Gagal upload gambar ke server.");
         }
 
-        const { data: urlData } = supabase.storage.from(bucketName).getPublicUrl(fileName);
+        const { data: urlData } = supabase.storage.from(bucketName).getPublicUrl(filePath);
         buktiUrl = urlData.publicUrl;
     }
 
-    // --- SIMPAN KE DATABASE ---
+    // --- SIMPAN KE DATABASE (TRANSACTION) ---
     await prisma.$transaction(async (tx) => {
-      const siswaData = await tx.tb_siswa.findUnique({where:{id_siswa: parseInt(id_siswa)}});
-      if(!siswaData?.NISN) throw new Error("Data Siswa tidak ditemukan.");
+      const idInt = parseInt(id_input);
+      let nisnTarget = "";
+      let finalIdSiswa: number | null = null;
 
-      const daftarUlang = await tx.tb_daftar_ulang.findFirst({
-        where: { tb_pendaftaran: { nisn: siswaData.NISN } }
+      // 1. CEK DATA SISWA/PENDAFTAR (PERBAIKAN UTAMA DISINI)
+      // Coba cari di tb_siswa dulu (User sudah resmi jadi siswa)
+      const siswaData = await tx.tb_siswa.findUnique({
+        where: { id_siswa: idInt }
       });
-      if (!daftarUlang) throw new Error("Data Daftar Ulang tidak ditemukan.");
 
+      if (siswaData) {
+        // Jika ketemu di tb_siswa
+        nisnTarget = siswaData.NISN;
+        finalIdSiswa = siswaData.id_siswa;
+      } else {
+        // Jika tidak ketemu, cari di tb_pendaftaran (User masih calon/baru divalidasi admin)
+        // Dalam kasus ini, id_input adalah id_pendaftar
+        const pendaftarData = await tx.tb_pendaftaran.findUnique({
+            where: { id_pendaftar: idInt }
+        });
+
+        if (pendaftarData) {
+            nisnTarget = pendaftarData.nisn;
+            finalIdSiswa = null; // Belum masuk tb_siswa, jadi field id_siswa di pembayaran NULL
+        } else {
+            throw new Error("Data Siswa atau Pendaftar tidak ditemukan.");
+        }
+      }
+
+      // 2. AMBIL ID DAFTAR ULANG (Relasi via NISN)
+      const daftarUlang = await tx.tb_daftar_ulang.findFirst({
+        where: { tb_pendaftaran: { nisn: nisnTarget } }
+      });
+
+      if (!daftarUlang) {
+         // Jika divalidasi admin, harusnya data ini ada. 
+         // Jika error disini, berarti validasi admin belum membuat record tb_daftar_ulang.
+         throw new Error("Data Daftar Ulang belum dibuat. Hubungi Admin.");
+      }
+
+      // 3. LOOPING ITEM PEMBAYARAN
       for (const item of items) {
         if (!item.nama.toLowerCase().includes("pendaftaran")) {
-            // FIX DISINI: 
-            // Gunakan item.nominal_bayar (nominal per item) BUKAN nominal_bayar_global
-            // Jika item.nominal_bayar tidak ada (undefined), fallback ke 0.
             const nominalPerItem = item.nominal_bayar ? parseInt(item.nominal_bayar) : 0;
 
             await tx.tb_pembayaran_daftar_ulang.create({
               data: {
                 id_daftar_ulang: daftarUlang.id_daftar_ulang,
-                id_siswa: parseInt(id_siswa),
+                
+                // Gunakan finalIdSiswa (bisa angka ID, bisa NULL jika belum resmi siswa)
+                id_siswa: finalIdSiswa, 
+                
                 id_jenis_pembayaran: item.id_jenis,
-                
-                // Gunakan Nominal Spesifik Per Item
-                nominal: nominalPerItem, 
-                
+                nominal: nominalPerItem,
                 metode_pembayaran: metode === 'transfer' ? 'transfer' : 'cash',
                 status: 'menunggu',
                 bukti_pembayaran: buktiUrl,
-                approved_by: pengirim, 
+                approved_by: pengirim,
                 tanggal_bayar: new Date()
               }
             });

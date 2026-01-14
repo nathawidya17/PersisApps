@@ -213,7 +213,7 @@ export default function DetailCalonSiswaPage() {
               onClick={() => setShowConfirm(true)}
               className="px-5 py-2.5 bg-[#5BA47E] text-white rounded-[8px] text-sm font-semibold flex items-center gap-2 shadow-sm transition-all hover:bg-[#4a8a68] cursor-pointer"
             >
-              <CheckCircle size={18} /> {isDaftarUlang ? "Validasi Siswa" : "Validasi Calon Siswa"}
+              <CheckCircle size={18} /> {isDaftarUlang ? "Validasi Siswa" : "Validasi Daftar Ulang"}
             </button>
             <button 
               onClick={() => setShowKeringananConfirm(true)}
