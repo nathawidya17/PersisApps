@@ -66,7 +66,7 @@ const Navbar = () => {
             </div>
             <div className="flex flex-col">
                 <span className="text-[10px] font-bold text-[#0A8F47]  tracking-widest">PPDB</span>
-                <span className="font-bold text-[#0A8F47] text-[12px] ">PERSIS KUDANG</span>
+                <span className="font-bold text-[#0A8F47] text-[12px] ">MA PERSIS KUDANG</span>
               </div>
           </Link>
 
@@ -173,7 +173,7 @@ const Navbar = () => {
             </div>
             <div className="flex flex-col">
                 <span className="text-[10px] font-bold text-[#0A8F47]  tracking-widest">PPDB</span>
-                <span className="font-bold text-[#0A8F47] text-[12px] ">PERSIS KUDANG</span>
+                <span className="font-bold text-[#0A8F47] text-[12px] ">MA PERSIS KUDANG</span>
               </div>
           </Link>
             </div>

@@ -159,25 +159,35 @@ export default function LandingPage() {
       {/* ========================================= */}
       {/* BROSUR PPDB SECTION                       */}
       {/* ========================================= */}
-      <section className="px-4 py-16 lg:py-24 text-center lg:px-0"> 
-        <h2 className="text-[28px] lg:text-5xl font-black text-[#333333] mb-3">Brosur PPDB</h2>
-        <p className="max-w-2xl mx-auto text-[#777777] font-medium text-[13px] lg:text-base px-4 leading-relaxed">
-            Brosur resmi yang memuat informasi singkat mengenai profil madrasah, program pendidikan, fasilitas, serta penerimaan peserta didik baru.
-        </p>
-        
-        {/* Gambar Brosur */}
-        <div className="mt-8 lg:mt-16 w-full mx-auto relative flex justify-center">
-            {/* Wrapper width menyesuaikan mobile agar tidak terlalu lebar */}
-            <div className="relative w-full max-w-[320px] lg:max-w-4xl h-[200px] lg:h-[600px] shadow-lg rounded-xl overflow-hidden lg:shadow-none lg:rounded-none lg:overflow-visible">
-               <Image 
-                   src="/brosur.png" 
-                   alt="Brosur PPDB MA Persis Kudang" 
-                   fill 
-                   className="object-contain"
-               />
-            </div>
-        </div>
-      </section>
+    <section className="px-4 py-16 lg:py-24 text-center lg:px-0">
+  <h2 className="text-[28px] lg:text-5xl font-black text-[#333333] mb-3">
+    Brosur PPDB
+  </h2>
+  <p className="max-w-2xl mx-auto text-[#777777] font-medium text-[13px] lg:text-base px-4 leading-relaxed">
+    Brosur resmi yang memuat informasi singkat mengenai profil madrasah, program
+    pendidikan, fasilitas, serta penerimaan peserta didik baru.
+  </p>
+
+  {/* Gambar Brosur */}
+  <div className="mt-8 lg:mt-16 w-full mx-auto relative flex justify-center px-4 lg:px-0">
+    {/* PERUBAHAN DI SINI:
+       1. max-w-[320px] diubah menjadi max-w-lg (lebih lebar di mobile/tablet kecil)
+       2. lg:max-w-4xl diubah menjadi lg:max-w-6xl (jauh lebih lebar di desktop)
+       3. h-[200px] diubah menjadi h-[400px] (lebih tinggi di mobile)
+       4. lg:h-[600px] diubah menjadi lg:h-[800px] (lebih tinggi di desktop agar proporsional)
+    */}
+    <div className="relative w-full max-w-lg md:max-w-2xl lg:max-w-6xl h-[400px] md:h-[500px] lg:h-[800px] shadow-lg rounded-xl overflow-hidden lg:shadow-none lg:rounded-none lg:overflow-visible">
+      <Image
+        src="/brosurr.png"
+        alt="Brosur PPDB MA Persis Kudang"
+        fill
+        className="object-contain"
+        // Menambahkan priority jika ini adalah gambar penting di atas lipatan layar
+        priority 
+      />
+    </div>
+  </div>
+</section>
 
       <Footer />
     </div>

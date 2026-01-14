@@ -345,7 +345,7 @@ export default function RegistrationForm() {
                     </div>
                     {/* Batasi nama 100 karakter */}
                     <InputGroup label="Nama Siswa" name="nama_lengkap" value={formData.nama_lengkap} onChange={handleChange} placeholder="Nama lengkap" maxLength={100} />
-                    <SelectGroup label="Jenis Kelamin" name="jenis_kelamin" value={formData.jenis_kelamin} onChange={handleChange} options={["Putra", "Putri"]} />
+                    <SelectGroup label="Jenis Kelamin" name="jenis_kelamin" value={formData.jenis_kelamin} onChange={handleChange} options={["Laki-laki", "Perempuan"]} />
                     <InputGroup label="Tempat Lahir" name="tempat_lahir" value={formData.tempat_lahir} onChange={handleChange} placeholder="Contoh: Garut" maxLength={50} />
                     
                     <DatePickerGroup 

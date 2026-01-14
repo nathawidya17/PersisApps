@@ -38,12 +38,13 @@ export default function DaftarSiswaPage() {
     fetchData();
   }, []);
 
-  // --- STATS DATA ---
+  // --- STATS DATA (UPDATE: Laki-laki & Perempuan) ---
   const stats = useMemo(() => {
     return {
       total: data.length,
-      putra: data.filter(s => s.jenis_kelamin?.toLowerCase() === "putra").length,
-      putri: data.filter(s => s.jenis_kelamin?.toLowerCase() === "putri").length,
+      // Ubah logika filter sesuai string di Database
+      laki: data.filter(s => s.jenis_kelamin === "Laki-laki").length,
+      perempuan: data.filter(s => s.jenis_kelamin === "Perempuan").length,
       belumLunas: data.filter(s => s.status_pembayaran === "belum_lunas").length,
     };
   }, [data]);
@@ -59,10 +60,9 @@ export default function DaftarSiswaPage() {
       const matchTipe = filterTipe === "Semua" || (s.tipe_siswa?.toLowerCase() || "") === filterTipe.toLowerCase();
       const matchJalur = filterJalur === "Semua" || (s.jalur_pendaftaran?.toLowerCase() || "") === filterJalur.toLowerCase();
       
-      // Filter Status (Case insensitive & logic fix)
       let matchStatus = true;
       if (filterStatus !== "Semua") {
-          const statusLower = s.status_pembayaran?.toLowerCase(); // lunas / belum_lunas
+          const statusLower = s.status_pembayaran?.toLowerCase();
           matchStatus = statusLower === filterStatus.toLowerCase();
       }
 
@@ -135,12 +135,13 @@ export default function DaftarSiswaPage() {
     <div className="ml-64 bg-gray-100 min-h-screen pb-10 px-5 pt-5 antialiased font-sans">
       <h2 className="text-xl font-bold text-gray-800 mb-5">Daftar Siswa</h2>
       
-      {/* 1. Stat Cards */}
+      {/* 1. Stat Cards (UPDATE LABELS) */}
       <div className="flex flex-wrap gap-5 mb-5">
         <StatCard label="Total Siswa" value={stats.total} icon={<Users size={22} />} iconBg="bg-green-50" iconColor="text-green-600" />
-        <StatCard label="Siswa Putra" value={stats.putra} icon={<Mars size={22} />} iconBg="bg-yellow-50" iconColor="text-yellow-600" />
-        <StatCard label="Siswa Putri" value={stats.putri} icon={<Venus size={22} />} iconBg="bg-red-50" iconColor="text-red-600" />
-        <StatCard label="Siswa Belum Lunas" value={stats.belumLunas} icon={<CreditCard size={22} />} iconBg="bg-indigo-50" iconColor="text-indigo-600" />
+        {/* Update Label & Variable */}
+        <StatCard label="Siswa Laki-laki" value={stats.laki} icon={<Mars size={22} />} iconBg="bg-indigo-50" iconColor="text-indigo-600" />
+        <StatCard label="Siswa Perempuan" value={stats.perempuan} icon={<Venus size={22} />} iconBg="bg-orange-50" iconColor="text-orange-600" />
+        <StatCard label="Siswa Belum Lunas" value={stats.belumLunas} icon={<CreditCard size={22} />} iconBg="bg-red-50" iconColor="text-red-600" />
       </div>
 
       {/* 2. Table Section */}
@@ -152,15 +153,17 @@ export default function DaftarSiswaPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
               <input type="text" placeholder="Cari..." className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-[8px] text-sm focus:outline-none focus:ring-1 focus:ring-green-600" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
             </div>
-            {/* Filter Gender */}
+            
+            {/* Filter Gender (UPDATE OPTIONS) */}
             <div className="relative">
               <select className="appearance-none pl-10 pr-8 py-2 bg-gray-50 border border-gray-200 rounded-[8px] text-sm focus:outline-none cursor-pointer w-full" value={filterGender} onChange={(e) => setFilterGender(e.target.value)}>
                 <option value="Semua">Semua Gender</option>
-                <option value="Putra">Putra</option>
-                <option value="Putri">Putri</option>
+                <option value="Laki-laki">Laki-laki</option>
+                <option value="Perempuan">Perempuan</option>
               </select>
               <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
             </div>
+
             {/* Filter Status */}
             <div className="relative">
               <select className="appearance-none pl-10 pr-8 py-2 bg-gray-50 border border-gray-200 rounded-[8px] text-sm focus:outline-none cursor-pointer w-full" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
@@ -177,7 +180,7 @@ export default function DaftarSiswaPage() {
           </button>
         </div>
 
-        {/* --- TABLE CONTENT (PERBAIKAN 1 BARIS: whitespace-nowrap) --- */}
+        {/* --- TABLE CONTENT --- */}
         <div className="overflow-x-auto mt-6">
             <table className="w-full border-collapse">
             <thead>
@@ -198,18 +201,19 @@ export default function DaftarSiswaPage() {
                     <tr key={i} className="hover:bg-gray-50/20 transition-colors duration-200">
                     <td className="py-4 px-6 text-[12px] font-normal whitespace-nowrap">{item.NISN}</td>
                     
-                    {/* TRUNCATE NAME AGAR TIDAK TURUN BARIS */}
                     <td className="py-4 px-6 text-[13px] font-medium whitespace-nowrap max-w-[200px] truncate" title={item.nama_lengkap}>
                         {item.nama_lengkap}
                     </td>
                     
+                    {/* UPDATE BADGE LOGIC: Laki-laki / Perempuan */}
                     <td className="py-4 px-6 text-center whitespace-nowrap">
                         <span className={`px-3 py-1 rounded-full text-[10px] font-bold ${
-                        item.jenis_kelamin === 'Putra' ? 'bg-indigo-50 text-indigo-500' : 'bg-orange-50 text-orange-500'
+                        item.jenis_kelamin === 'Laki-laki' ? 'bg-indigo-50 text-indigo-500' : 'bg-orange-50 text-orange-500'
                         }`}>
                         {item.jenis_kelamin}
                         </span>
                     </td>
+
                     <td className="py-4 px-6 text-[12px] font-normal whitespace-nowrap">
                         {item.tempat_lahir}, {item.tanggal_lahir ? new Date(item.tanggal_lahir).toLocaleDateString('id-ID') : "-"}
                     </td>
@@ -218,7 +222,6 @@ export default function DaftarSiswaPage() {
                     </td>
                     <td className="py-4 px-6 text-center text-[12px] font-normal capitalize whitespace-nowrap">{item.jalur_pendaftaran}</td>
                     
-                    {/* STATUS PEMBAYARAN */}
                     <td className="py-4 px-6 text-center whitespace-nowrap">
                         <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${
                             item.status_pembayaran === 'lunas' ? 'text-green-600 bg-green-50' : 'text-red-500 bg-red-50'

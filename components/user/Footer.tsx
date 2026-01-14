@@ -19,7 +19,7 @@ const Footer = () => {
                 />
               </div>
               <h2 className="text-[#068A50] font-bold text-[20px] tracking-tight uppercase">
-                Persis Kudang 212
+                MA Persis Kudang
               </h2>
             </div>
             

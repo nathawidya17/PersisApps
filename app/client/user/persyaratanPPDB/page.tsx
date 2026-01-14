@@ -12,7 +12,7 @@ export default function TnCPage() {
   const [selectedJalur, setSelectedJalur] = useState("");
 
   const handleOpenModal = () => setIsModalOpen(true);
-// --- LETAKKAN KODE DISINI ---
+
   const handleSelectJalur = (jalurId: string) => {
     setSelectedJalur(jalurId);
     
@@ -24,115 +24,107 @@ export default function TnCPage() {
       router.push('/client/user/form-pendaftaran');
     }, 400);
   };
-  //
-
-  const sections = [
-    {
-      title: "Syarat Pendaftaran",
-      content: [
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-        "Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-        "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.",
-        "Duis aute irure dolor in reprehenderit in voluptate velit esse.",
-        "Excepteur sint occaecat cupidatat non proident, sunt in culpa."
-      ]
-    },
-    {
-      title: "Ketentuan Pendaftaran",
-      content: [
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-        "Sed ut perspiciatis unde omnis iste natus error sit voluptatem.",
-        "At vero eos et accusamus et iusto odio dignissimos ducimus.",
-        "Et harum quidem rerum facilis est et expedita distinctio.",
-        "Nam libero tempore, cum soluta nobis est eligendi optio.",
-        "Temporibus autem quibusdam et aut officiis debitis."
-      ]
-    },
-    {
-      title: "Seleksi dan Pengumuman",
-      content: [
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-        "Neque porro quisquam est qui dolorem ipsum quia dolor sit amet.",
-        "Ut enim ad minima veniam, quis nostrum exercitationem ullam.",
-        "Quis autem vel eum iure reprehenderit qui in ea voluptate.",
-        "Nihil molestiae consequatur, vel illum qui dolorem eum."
-      ]
-    },
-    {
-      title: "Daftar Ulang",
-      content: [
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-        "Neque porro quisquam est qui dolorem ipsum quia dolor sit amet.",
-        "Ut enim ad minima veniam, quis nostrum exercitationem ullam.",
-        "Quis autem vel eum iure reprehenderit qui in ea voluptate.",
-        "Nihil molestiae consequatur, vel illum qui dolorem eum."
-      ]
-    },
-    {
-      title: "Penutup",
-      content: [
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-        "Neque porro quisquam est qui dolorem ipsum quia dolor sit amet.",
-        "Ut enim ad minima veniam, quis nostrum exercitationem ullam.",
-        "Quis autem vel eum iure reprehenderit qui in ea voluptate.",
-        "Nihil molestiae consequatur, vel illum qui dolorem eum."
-      ]
-    }
-  ];
 
   return (
     <div className="min-h-screen bg-white font-sans text-[#333333]">
       <Navbar />
 
-      {/* Gunakan max-w-[1400px] atau w-[95%] agar menjorok ke kiri-kanan sesuai gambar */}
       <main className="w-[95%] max-w-[1440px] mx-auto py-6">
         
-        {/* HEADER BANNER - Disesuaikan agar gambar murni terlihat jelas */}
+        {/* HEADER BANNER */}
         <div 
           className="relative w-full h-[220px] md:h-[270px] rounded-[20px] overflow-hidden flex flex-col items-center justify-center mb-12 shadow-md"
           style={{ 
-            backgroundImage: "url('/Container.png')", 
+            backgroundImage: "url('/Container.png')", // Pastikan gambar ini ada di folder public
             backgroundSize: 'cover', 
             backgroundPosition: 'center',
-            backgroundColor: '#3D7B54' // Fallback color
+            backgroundColor: '#3D7B54' 
           }}
         >
-          {/* Overlay dihilangkan/dipertipis agar gambar Container.png asli terlihat jelas */}
           <div className="relative z-10 text-center text-white px-4">
-            <h1 className="text-4xl md:text-[64px] font-bold mb-4 tracking-tight leading-tight">
-              Syarat dan Ketentuan PPDB
+            <h1 className="text-3xl md:text-[56px] font-bold mb-2 tracking-tight leading-tight">
+              Persyaratan PPDB MA Persis Kudang
             </h1>
-            <p className="text-sm md:text-lg font-medium opacity-100">
+            <p className="text-sm md:text-base font-medium opacity-90">
               Terakhir diupdate pada 1 Januari 2026
             </p>
           </div>
         </div>
 
-        {/* CONTENT AREA - Tetap menjaga margin internal agar teks nyaman dibaca */}
+        {/* CONTENT AREA */}
         <div className="max-w-[1330px] mx-auto px-4">
-          <p className="text-[14px] md:text-[16px] leading-[1.8] text-gray-700 mb-10 text-justify">
-            Harap membaca dan memahami syarat serta ketentuan PPDB Pesantren Persis Kudang sebelum melakukan pendaftaran. Syarat dan ketentuan ini disusun sebagai pedoman bagi calon peserta didik dan orang tua/wali dalam mengikuti proses Penerimaan Peserta Didik Baru (PPDB) Pesantren Persis Kudang agar berjalan tertib, transparan, dan sesuai ketentuan yang berlaku.
+          
+          {/* Paragraf Pembuka */}
+          <p className="text-[14px] md:text-[16px] leading-[1.8] text-gray-600 mb-10 text-justify">
+            Harap membaca dan memahami Persyaratan PPDB Pesantren Persis Kudang sebelum melakukan pendaftaran. Syarat dan ketentuan ini disusun sebagai pedoman bagi calon peserta didik dan orang tua/wali dalam mengikuti proses Penerimaan Peserta Didik Baru (PPDB) Pesantren Persis Kudang agar berjalan tertib, transparan, dan sesuai ketentuan yang berlaku.
           </p>
 
-          <div className="space-y-10">
-            {sections.map((sec, idx) => (
-              <div key={idx} className="space-y-4">
-                <h2 className="text-[20px] font-bold text-gray-800">{sec.title}</h2>
-                <ul className="list-disc list-outside ml-6 space-y-2">
-                  {sec.content.map((item, i) => (
-                    <li key={i} className="text-[14px] text-gray-600 leading-relaxed">
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+          <div className="space-y-10 text-gray-700">
+            
+            {/* SECTION 1: Persyaratan Umum */}
+            <div className="space-y-4">
+              <h2 className="text-[22px] font-bold text-gray-800">Persyaratan Umum</h2>
+              <ul className="list-disc list-outside ml-5 space-y-2 text-[15px] leading-relaxed">
+                <li>Membayar Biaya Pendaftaran</li>
+                <li>Mengisi dan melengkapi identitas dan data calon santri baru</li>
+                <li>
+                  Mempersiapkan berkas-berkas dalam bentuk scan gambar ketika pendaftaran online dan fhotocofy fisik ketika daftar ulang
+                  <ul className="mt-1 ml-1 space-y-1 list-none">
+                    <li>a. Ijazah / SMP / MTs (telah dilegalisir)</li>
+                    <li>b. KK</li>
+                    <li>c. Akta kelahiran</li>
+                    <li>d. KTP orang tua</li>
+                    <li>e. KIP, KKS, PKH (jika ada)</li>
+                    <li>f. Pas foto ukuran 3x4 (3 lembar)</li>
+                  </ul>
+                </li>
+              </ul>
+              <p className="text-[14px] font-bold text-gray-600 mt-2">
+                *Semua berkas pendaftaran disusun rapi & diserahkan menggunakan MAP Biola warna ketika daftar ulang
+              </p>
+            </div>
+
+            {/* SECTION 2: Persyaratan Pendaftaran Asrama */}
+            <div className="space-y-4">
+              <h2 className="text-[22px] font-bold text-gray-800">Persyaratan Pendaftaran Asrama</h2>
+              <ul className="list-disc list-outside ml-5 space-y-2 text-[15px] leading-relaxed">
+                <li>Peralatan mandi, cuci & peralatan tidur</li>
+                <li>Pakaian secukupnya</li>
+              </ul>
+            </div>
+
+            {/* SECTION 3: Persyaratan Tambahan */}
+            <div className="space-y-4">
+              <h2 className="text-[22px] font-bold text-gray-800">Persyaratan Tambahan</h2>
+              <ul className="list-disc list-outside ml-5 space-y-4 text-[15px] leading-relaxed">
+                
+                {/* Jalur Prestasi Akademik */}
+                <li>
+                  <span className="font-semibold">Jalur Prestasi Akademik :</span>
+                  <ul className="mt-1 ml-1 space-y-1 list-none">
+                    <li>a. File/fotokopi rapor 5 semester terakhir</li>
+                    <li>b. Sertifikat prestasi/ perlombaan tingkat kabupaten/provinsi/nasional yang relevan</li>
+                  </ul>
+                </li>
+
+                {/* Jalur Tahfidz */}
+                <li>
+                  <span className="font-semibold">Jalur Tahfidz :</span>
+                  <ul className="mt-1 ml-1 space-y-1 list-none">
+                    <li>a. Sertifikat tahfizh terbaru 2025 dari lembaga tahfizh atau sekolah asal</li>
+                    <li>b. Sertifikat prestasi/lomba tahfidz (jika ada)</li>
+                  </ul>
+                </li>
+
+              </ul>
+            </div>
+
           </div>
 
-          {/* MAIN ACTION BUTTON - Hijau Tua sesuai tombol Login Admin di gambar */}
+          {/* MAIN ACTION BUTTON */}
           <button 
             onClick={handleOpenModal}
-            className="w-full mt-16 py-4 bg-[#068A50]  text-white font-bold text-lg rounded-xl transition-all shadow-lg"
+            className="w-full mt-16 py-4 bg-[#068A50] hover:bg-[#057a46] text-white font-bold text-lg rounded-lg transition-all shadow-lg active:scale-[0.99]"
           >
             Setuju dan Lanjutkan
           </button>
@@ -153,25 +145,25 @@ export default function TnCPage() {
             </div>
 
             <div className="p-6 space-y-4">
-  <JalurOption 
-    title="Jalur Tahfidz"
-    desc="Untuk calon peserta didik yang memiliki hafalan Al-Qur'an dan komitmen tahfidz."
-    selected={selectedJalur === "tahfidz"} // Menggunakan huruf kecil
-    onSelect={() => handleSelectJalur("tahfidz")}
-  />
-  <JalurOption 
-    title="Jalur Prestasi"
-    desc="Untuk calon peserta didik dengan prestasi akademik maupun non-akademik."
-    selected={selectedJalur === "prestasi"}
-    onSelect={() => handleSelectJalur("prestasi")}
-  />
-  <JalurOption 
-    title="Jalur Umum"
-    desc="Jalur pendaftaran umum untuk seluruh calon peserta didik sesuai ketentuan pesantren."
-    selected={selectedJalur === "umum"}
-    onSelect={() => handleSelectJalur("umum")}
-  />
-</div>
+              <JalurOption 
+                title="Jalur Tahfidz"
+                desc="Untuk calon peserta didik yang memiliki hafalan Al-Qur'an dan komitmen tahfidz."
+                selected={selectedJalur === "tahfidz"} 
+                onSelect={() => handleSelectJalur("tahfidz")}
+              />
+              <JalurOption 
+                title="Jalur Prestasi"
+                desc="Untuk calon peserta didik dengan prestasi akademik maupun non-akademik."
+                selected={selectedJalur === "prestasi"}
+                onSelect={() => handleSelectJalur("prestasi")}
+              />
+              <JalurOption 
+                title="Jalur Umum"
+                desc="Jalur pendaftaran umum untuk seluruh calon peserta didik sesuai ketentuan pesantren."
+                selected={selectedJalur === "umum"}
+                onSelect={() => handleSelectJalur("umum")}
+              />
+            </div>
           </div>
         </div>
       )}
