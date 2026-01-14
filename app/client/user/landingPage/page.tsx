@@ -18,7 +18,7 @@ export default function LandingPage() {
     {/* ========================================= */}
       {/* HERO SECTION                              */}
       {/* ========================================= */}
-      <section className="relative w-full min-h-[600px] lg:min-h-[764px] flex flex-col lg:flex-row items-center bg-white overflow-hidden mb-0 lg:mb-12">
+      <section className="relative w-full min-h-[620px] lg:min-h-[764px] flex flex-col lg:flex-row items-center bg-white overflow-hidden mb-0 lg:mb-12">
         
         {/* BACKGROUND */}
         <div className="absolute inset-0 w-full h-full z-0">
@@ -57,7 +57,7 @@ export default function LandingPage() {
           
           {/* 2. MODEL IMAGE (Siswa) */}
           {/* UPDATE: Tinggi gambar di mobile dikurangi jadi h-[300px] biar pas sama min-h-500px */}
-          <div className="relative w-full lg:w-1/2 flex justify-center items-end mt-4 lg:mt-0 h-[300px] lg:h-[764px]">
+          <div className="relative w-full lg:w-1/2 flex justify-center items-end mt-4 lg:mt-0 h-[320px] lg:h-[764px]">
             <div className="relative w-[260px] h-full lg:w-[120%]">
               <Image 
                 src="/model.png" 

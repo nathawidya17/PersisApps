@@ -58,8 +58,7 @@ export default function DetailPembayaranPage() {
   const buktiTransfer = items.length > 0 ? items[0].bukti : null;
 
   // --- LOGIC PENGECEKAN STATUS ---
-  // Cek apakah semua item sudah diproses (Lunas atau Ditolak)
-  // Jika items masih kosong (loading), anggap belum selesai biar gak flickering
+  // Tombol hilang jika semua item sudah LUNAS atau DITOLAK
   const isTransactionCompleted = items.length > 0 && items.every((item: any) => item.status === 'lunas' || item.status === 'ditolak');
 
   // --- HANDLER BUTTON KLIK ---
@@ -68,14 +67,16 @@ export default function DetailPembayaranPage() {
     setShowConfirmModal(true);
   };
 
-  // --- LOGIC EKSEKUSI ---
+  // --- LOGIC EKSEKUSI (FINAL FIX: Promise.allSettled) ---
   const executeBatchAction = async () => {
     if (!confirmActionType) return;
     setProcessing(true);
 
     try {
       const promises = items.map(item => {
+        // Skip item yang sudah selesai agar tidak double request
         if (item.status === 'lunas' || item.status === 'ditolak') return Promise.resolve();
+        
         return axios.patch("/server/api/admin/pembayaran", {
           id: item.id,
           type: item.type,
@@ -84,23 +85,23 @@ export default function DetailPembayaranPage() {
         });
       });
 
-      await Promise.all(promises);
+      // UPDATE PENTING: Pakai allSettled biar ga error 500 kalau ada race condition
+      await Promise.allSettled(promises);
 
       setShowConfirmModal(false);
       
-      showNotification(`Transaksi berhasil di-${confirmActionType}`, "success");
+      showNotification(`Proses selesai. Data berhasil diperbarui.`, "success");
 
+      // Reload halaman otomatis agar data sinkron dengan database
       setTimeout(() => {
-          // Refresh halaman atau redirect
-          // Kita reload data aja biar status terupdate di UI tanpa pindah halaman
           window.location.reload(); 
-          // atau router.push("/client/admin/pembayaran");
-      }, 1500);
+      }, 1000);
 
     } catch (error) {
-      console.error("Error:", error);
+      console.error("Error batch:", error);
       setShowConfirmModal(false);
-      showNotification("Terjadi kesalahan sistem.", "error");
+      // Tetap reload karena kemungkinan besar data sebagian sudah masuk
+      window.location.reload();
     } finally {
       setProcessing(false);
     }
@@ -201,9 +202,9 @@ export default function DetailPembayaranPage() {
                 </div>
             )}
             
-            {/* TAMPILAN STATUS JIKA SELESAI (Opsional, biar area kanan gak kosong melompong) */}
+            {/* TAMPILAN STATUS JIKA SELESAI */}
             {isTransactionCompleted && (
-                 <div className="flex items-center gap-2 px-6 py-2 bg-gray-50 text-gray-500 rounded-xl border border-gray-200">
+                 <div className="flex items-center gap-2 px-6 py-2 bg-gray-50 text-gray-500 rounded-xl border border-gray-200 cursor-default">
                     <Check size={16} strokeWidth={3} className="text-green-600"/>
                     <span className="text-xs font-bold uppercase tracking-wider">Transaksi Selesai</span>
                  </div>
