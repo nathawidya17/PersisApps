@@ -200,6 +200,9 @@ export default function DetailPembayaranPage() {
                 </div>
             )}
             
+          
+            
+            
             {isTransactionCompleted && (
                  <div className="flex items-center gap-2 px-6 py-2 bg-gray-50 text-gray-500 rounded-xl border border-gray-200 cursor-default">
                     <Check size={16} strokeWidth={3} className="text-green-600"/>

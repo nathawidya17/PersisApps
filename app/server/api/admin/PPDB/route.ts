@@ -53,10 +53,10 @@ export async function GET() {
         // Logika label status untuk UI
         if (statusBayar === 'lunas') {
             statusLabel = "Daftar Ulang";
-        } else if (statusBayar === 'menunggu') {
-            statusLabel = "Verifikasi Pembayaran"; // Sedikit saya perjelas
+        } else if (statusBayar === 'belum') {
+            statusLabel = "Daftar Ulang"; // Sedikit saya perjelas
         } else {
-            statusLabel = "Daftar Ulang (Belum Bayar)";
+            statusLabel = "Daftar Ulang ";
         }
 
         return {

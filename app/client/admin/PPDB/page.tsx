@@ -57,7 +57,6 @@ export default function PPDBPage() {
       const matchGender = filterGender === "Semua" || displayGender(item.jenis_kelamin) === filterGender;
 
       // 3. Filter Tahap (Pendaftaran / Daftar Ulang)
-      // Note: Pastikan value 'status' di DB konsisten (case-insensitive check)
       const matchTahap = filterTahap === "Semua" || item.status?.toLowerCase() === filterTahap.toLowerCase();
 
       // 4. Filter Jalur (Umum / Tahfidz / Prestasi)
@@ -172,72 +171,102 @@ export default function PPDBPage() {
         </div>
 
         {/* TABEL */}
-        <table className="w-full border-collapse mt-6">
-          <thead>
-            <tr className="text-[#94A3B8] border-b border-gray-50 text-[10px]">
-              <th className="text-left py-5 px-6 font-normal  tracking-widest whitespace-nowrap">NISN</th>
-              <th className="text-left py-5 px-6 font-normal  tracking-widest whitespace-nowrap">Nama Siswa</th>
-              <th className="text-center py-5 px-6 font-normal  tracking-widest whitespace-nowrap">Jenis Kelamin</th>
-              <th className="text-left py-5 px-6 font-normal  tracking-widest whitespace-nowrap">Tempat, Tanggal Lahir</th>
-              <th className="text-center py-5 px-6 font-normal  tracking-widest whitespace-nowrap">Tahap</th>
-              <th className="text-center py-5 px-6 font-normal  tracking-widest whitespace-nowrap">Jalur</th>
-              <th className="text-center py-5 px-6 font-normal  tracking-widest whitespace-nowrap">Update Terbaru</th>
-              <th className="text-center py-5 px-6 font-normal  tracking-widest whitespace-nowrap">Detail</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50 text-[#3b3b3b]">
-            {paginatedData.length > 0 ? (
-              paginatedData.map((siswa, i) => (
-                <tr key={i} className="hover:bg-gray-50/20 transition-colors duration-200">
-                  <td className="py-5 px-6 text-[12px] font-normal">{siswa.NISN}</td>
-                  <td className="py-5 px-6 text-[13px] font-normal capitalize">{siswa.nama_lengkap}</td>
-                  <td className="py-5 px-6 text-center">
-                    <span className={`px-4 py-1 rounded-full text-[11px] font-medium ${
-                      isMale(siswa.jenis_kelamin) ? 'bg-indigo-50 text-indigo-500' : 'bg-orange-50 text-orange-500'
-                    }`}>
-                      {displayGender(siswa.jenis_kelamin)}
-                    </span>
-                  </td>
-                  <td className="py-5 px-6 text-[12px] font-normal">{siswa.tempat_lahir}, {siswa.tanggal_lahir}</td>
-                  <td className="py-5 px-6 text-center">
-                    <div className="flex items-center justify-center gap-2">
-                      {/* Indikator Warna Status */}
-                      <div className={`w-1.5 h-1.5 rounded-full ${
-                        siswa.status === 'Daftar Ulang' ? 'bg-green-500' : 'bg-yellow-400'
-                      }`} />
-                      <span className="text-[12px] font-medium text-gray-700 capitalize">{siswa.status}</span>
+        <div className="overflow-x-auto mt-6">
+          {/* min-w dipasang agar kolom tidak menyempit ekstrem */}
+          <table className="w-full border-collapse min-w-[1000px]"> 
+            <thead>
+              <tr className="text-[#94A3B8] border-b border-gray-50 text-[10px]">
+                <th className="text-left py-5 px-6 font-normal tracking-widest whitespace-nowrap">NISN</th>
+                <th className="text-left py-5 px-6 font-normal tracking-widest whitespace-nowrap">Nama Siswa</th>
+                <th className="text-center py-5 px-6 font-normal tracking-widest whitespace-nowrap">Jenis Kelamin</th>
+                <th className="text-left py-5 px-6 font-normal tracking-widest whitespace-nowrap">Tempat, Tanggal Lahir</th>
+                <th className="text-center py-5 px-6 font-normal tracking-widest whitespace-nowrap">Tahap</th>
+                <th className="text-center py-5 px-6 font-normal tracking-widest whitespace-nowrap">Jalur</th>
+                <th className="text-center py-5 px-6 font-normal tracking-widest whitespace-nowrap">Update Terbaru</th>
+                <th className="text-center py-5 px-6 font-normal tracking-widest whitespace-nowrap">Detail</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50 text-[#3b3b3b]">
+              {paginatedData.length > 0 ? (
+                paginatedData.map((siswa, i) => (
+                  <tr key={i} className="hover:bg-gray-50/20 transition-colors duration-200">
+                    
+                    {/* NISN */}
+                    <td className="py-5 px-6 text-[12px] font-normal whitespace-nowrap">
+                      {siswa.NISN}
+                    </td>
+                    
+                    {/* NAMA: max-width + truncate agar tidak turun baris jika kepanjangan */}
+                    <td className="py-5 px-6 text-[13px] font-normal capitalize whitespace-nowrap max-w-[200px] truncate" title={siswa.nama_lengkap}>
+                      {siswa.nama_lengkap}
+                    </td>
+
+                    {/* GENDER */}
+                    <td className="py-5 px-6 text-center whitespace-nowrap">
+                      <span className={`px-4 py-1 rounded-full text-[11px] font-medium inline-block ${
+                        isMale(siswa.jenis_kelamin) ? 'bg-indigo-50 text-indigo-500' : 'bg-orange-50 text-orange-500'
+                      }`}>
+                        {displayGender(siswa.jenis_kelamin)}
+                      </span>
+                    </td>
+
+                    {/* TTL */}
+                    <td className="py-5 px-6 text-[12px] font-normal whitespace-nowrap">
+                      {siswa.tempat_lahir}, {siswa.tanggal_lahir}
+                    </td>
+
+                    {/* TAHAP */}
+                    <td className="py-5 px-6 text-center whitespace-nowrap">
+                      <div className="flex items-center justify-center gap-2">
+                        <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                          siswa.status === 'Daftar Ulang' ? 'bg-green-500' : 'bg-yellow-400'
+                        }`} />
+                        <span className="text-[12px] font-medium text-gray-700 capitalize">
+                          {siswa.status}
+                        </span>
+                      </div>
+                    </td>
+
+                    {/* JALUR */}
+                    <td className="py-5 px-6 text-center text-[12px] font-normal capitalize whitespace-nowrap">
+                      {siswa.jalur}
+                    </td>
+
+                    {/* UPDATE */}
+                    <td className="py-5 px-6 text-center text-[11px] text-gray-400 font-normal whitespace-nowrap">
+                      {siswa.updated_at}
+                    </td>
+
+                    {/* DETAIL */}
+                    <td className="py-5 px-6 text-center whitespace-nowrap">
+                      <Link href={`/client/admin/PPDB/${siswa.id_siswa || siswa.id || siswa.NISN}`}>
+                        <button className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors cursor-pointer">
+                          <span className="sr-only">Detail</span>
+                          <Info size={18} />
+                        </button>
+                      </Link>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={8} className="py-20 text-center">
+                    <div className="flex flex-col items-center justify-center gap-3">
+                      <div className="bg-gray-50 p-4 rounded-full">
+                        <Search size={40} className="text-gray-200" />
+                      </div>
+                      <p className="text-gray-500 text-sm font-semibold">Data Siswa tidak ditemukan</p>
                     </div>
-                  </td>
-                  <td className="py-5 px-6 text-center text-[12px] font-normal capitalize">{siswa.jalur}</td>
-                  <td className="py-5 px-6 text-center text-[11px] text-gray-400 font-normal">{siswa.updated_at}</td>
-                  <td className="py-5 px-6 text-center">
-                    <Link href={`/client/admin/PPDB/${siswa.id_siswa || siswa.id || siswa.NISN}`}>
-                      <button className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors cursor-pointer">
-                        <span className="sr-only">Detail</span>
-                        <Info size={18} />
-                      </button>
-                    </Link>
                   </td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={8} className="py-20 text-center">
-                  <div className="flex flex-col items-center justify-center gap-3">
-                    <div className="bg-gray-50 p-4 rounded-full">
-                      <Search size={40} className="text-gray-200" />
-                    </div>
-                    <p className="text-gray-500 text-sm font-semibold">Data Siswa tidak ditemukan</p>
-                  </div>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              )}
+            </tbody>
+          </table>
+        </div>
 
         {/* PAGINATION UI */}
-        <div className="flex items-center justify-between px-8 py-6 border-t border-gray-50">
-          <p className="text-[12px] text-gray-400 font-medium">
+        <div className="flex items-center justify-between px-8 py-6 border-t border-gray-50 mt-2">
+          <p className="text-[12px] text-gray-400 font-medium whitespace-nowrap">
             {filteredData.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}-
             {Math.min(currentPage * itemsPerPage, filteredData.length)} of {filteredData.length} items
           </p>
@@ -245,7 +274,7 @@ export default function PPDBPage() {
             <div className="flex items-center gap-1">
               <button disabled={currentPage === 1} onClick={() => setCurrentPage(1)} className="p-1 text-gray-400 hover:text-green-600 disabled:opacity-30 cursor-pointer"><ChevronsLeft size={18}/></button>
               <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => Math.max(1, p - 1))} className="p-1 text-gray-400 hover:text-green-600 disabled:opacity-30 cursor-pointer"><ChevronLeft size={18}/></button>
-              <div className="flex items-center gap-2 px-2">
+              <div className="flex items-center gap-2 px-2 hidden sm:flex">
                 {[...Array(totalPages)].map((_, idx) => (
                   <button 
                     key={idx} 
@@ -262,7 +291,7 @@ export default function PPDBPage() {
               <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(totalPages)} className="p-1 text-gray-400 hover:text-green-600 disabled:opacity-30 cursor-pointer"><ChevronsRight size={18}/></button>
             </div>
             
-            <div className="text-[12px] text-gray-400 flex items-center gap-2">
+            <div className="text-[12px] text-gray-400 flex items-center gap-2 whitespace-nowrap">
                <div className="relative flex items-center">
                   <select 
                     value={itemsPerPage}
@@ -275,7 +304,7 @@ export default function PPDBPage() {
                   </select>
                   <ChevronRight size={14} className="rotate-90 absolute right-0 pointer-events-none text-gray-400"/>
                </div>
-               <span className="ml-1">Items per page</span>
+               <span className="ml-1 hidden sm:inline">Items per page</span>
             </div>
           </div>
         </div>

@@ -15,6 +15,7 @@ export default function EditDetailSiswa() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState<any>({});
+  const [fieldErrors, setFieldErrors] = useState<{[key: string]: string}>({});
 
   // --- STATE MODAL & NOTIFIKASI ---
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -45,11 +46,72 @@ export default function EditDetailSiswa() {
   }, [id]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    const numValue = name === 'no_hp' || name === 'NISN' ? value.replace(/[^0-9]/g, '') : value;
+    
+    setFormData({ ...formData, [name]: numValue });
+    
+    // Real-time validation untuk no_hp
+    if (name === 'no_hp' && numValue) {
+      if (!numValue.startsWith("08")) {
+        setFieldErrors(prev => ({ ...prev, no_hp: "Nomor HP harus dimulai dengan 08" }));
+      } else if (numValue.length < 10 || numValue.length > 15) {
+        setFieldErrors(prev => ({ ...prev, no_hp: "Nomor HP harus 10-15 digit" }));
+      } else {
+        setFieldErrors(prev => ({ ...prev, no_hp: "" }));
+      }
+    }
+    
+    // Real-time validation untuk NISN
+    if (name === 'NISN' && numValue) {
+      if (numValue.length !== 10) {
+        setFieldErrors(prev => ({ ...prev, NISN: "NISN harus 10 digit" }));
+      } else {
+        setFieldErrors(prev => ({ ...prev, NISN: "" }));
+      }
+    }
   };
 
   // 1. Trigger Modal Konfirmasi
   const handlePreSubmit = () => {
+    // Validasi field-field penting
+    const errors: {[key: string]: string} = {};
+
+    // Email: harus ada @
+    if (formData.email && !formData.email.includes("@")) {
+      errors.email = "Email harus mengandung tanda @";
+    }
+
+    // No HP: harus dimulai 08, minimal 10 digit, maksimal 15 digit
+    if (formData.no_hp) {
+      if (!formData.no_hp.startsWith("08")) {
+        errors.no_hp = "Nomor HP harus dimulai dengan 08";
+      } else if (formData.no_hp.length < 10 || formData.no_hp.length > 15) {
+        errors.no_hp = "Nomor HP harus 10-15 digit";
+      }
+    }
+
+    // NISN: harus 10 digit
+    if (formData.NISN && formData.NISN.length !== 10) {
+      errors.NISN = "NISN harus 10 digit";
+    }
+
+    // NIK: harus 16 digit
+    if (formData.nik && formData.nik.length !== 16) {
+      errors.nik = "NIK harus 16 digit";
+    }
+
+    // NO_KK: harus 16 digit
+    if (formData.no_kk && formData.no_kk.length !== 16) {
+      errors.no_kk = "No KK harus 16 digit";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      return;
+    }
+
+    setFieldErrors({});
     setShowConfirmModal(true);
   };
 
@@ -168,10 +230,47 @@ export default function EditDetailSiswa() {
 
               <FormInput label="Anak Ke" name="anak_ke" value={formData.anak_ke} onChange={handleChange} placeholder="Contoh: 1" />
               <FormInput label="Jumlah Saudara" name="jumlah_saudara" value={formData.jumlah_saudara} onChange={handleChange} placeholder="Contoh: 2" />
-              <FormInput label="NIK" name="nik" value={formData.nik} onChange={handleChange} placeholder="16 digit NIK" />
-              <FormInput label="No KK" name="no_kk" value={formData.no_kk} onChange={handleChange} placeholder="16 digit No KK" />
-              <FormInput label="No Handphone" name="no_hp" value={formData.no_hp} onChange={handleChange} placeholder="+62 ..." />
-              <FormInput label="Email" name="email" value={formData.email} onChange={handleChange} placeholder="email@contoh.com" />
+              
+              {/* NIK dengan error message */}
+              <div>
+                <FormInput label="NIK" name="nik" value={formData.nik} onChange={handleChange} placeholder="16 digit NIK" isError={!!fieldErrors.nik} />
+                {fieldErrors.nik && (
+                  <div className="flex items-center gap-2 mt-2 text-red-500 text-xs font-medium">
+                    <AlertCircle size={14} /> {fieldErrors.nik}
+                  </div>
+                )}
+              </div>
+
+              {/* No KK dengan error message */}
+              <div>
+                <FormInput label="No KK" name="no_kk" value={formData.no_kk} onChange={handleChange} placeholder="16 digit No KK" isError={!!fieldErrors.no_kk} />
+                {fieldErrors.no_kk && (
+                  <div className="flex items-center gap-2 mt-2 text-red-500 text-xs font-medium">
+                    <AlertCircle size={14} /> {fieldErrors.no_kk}
+                  </div>
+                )}
+              </div>
+
+              {/* No HP dengan error message */}
+              <div>
+                <FormInput label="No Handphone" name="no_hp" value={formData.no_hp} onChange={handleChange} placeholder="+62 ..." isError={!!fieldErrors.no_hp} maxLength={15} />
+                {fieldErrors.no_hp && (
+                  <div className="flex items-center gap-2 mt-2 text-red-500 text-xs font-medium">
+                    <AlertCircle size={14} /> {fieldErrors.no_hp}
+                  </div>
+                )}
+              </div>
+
+              {/* Email dengan error message */}
+              <div>
+                <FormInput label="Email" name="email" value={formData.email} onChange={handleChange} placeholder="email@contoh.com" isError={!!fieldErrors.email} />
+                {fieldErrors.email && (
+                  <div className="flex items-center gap-2 mt-2 text-red-500 text-xs font-medium">
+                    <AlertCircle size={14} /> {fieldErrors.email}
+                  </div>
+                )}
+              </div>
+
               <div className="col-span-2">
                 <FormInput label="Alamat Lengkap" name="alamat" value={formData.alamat} onChange={handleChange} placeholder="Jl. Raya No..." />
               </div>
@@ -191,7 +290,16 @@ export default function EditDetailSiswa() {
               <div className="col-span-2">
                 <FormInput label="Alamat Sekolah" name="alamat_sekolah" value={formData.alamat_sekolah} onChange={handleChange} placeholder="Alamat lengkap sekolah" />
               </div>
-              <FormInput label="NISN" name="NISN" value={formData.NISN} onChange={handleChange} placeholder="10 digit NISN" />
+              
+              {/* NISN dengan error message */}
+              <div>
+                <FormInput label="NISN" name="NISN" value={formData.NISN} onChange={handleChange} placeholder="10 digit NISN" isError={!!fieldErrors.NISN} maxLength={10} />
+                {fieldErrors.NISN && (
+                  <div className="flex items-center gap-2 mt-2 text-red-500 text-xs font-medium">
+                    <AlertCircle size={14} /> {fieldErrors.NISN}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

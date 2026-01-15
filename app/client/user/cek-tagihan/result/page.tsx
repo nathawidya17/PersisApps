@@ -240,15 +240,15 @@ const ringkasan = data?.ringkasan || { total: 0, terbayar: 0, sisa: 0 };
                             <div className="space-y-3 mb-6">
                                 <div className="flex justify-between text-[13px]">
                                     <span className="text-gray-500">Total Tagihan :</span>
-                                    <span className="font-bold text-gray-800">{item.total_tagihan.toLocaleString('id-ID')}</span>
+                                    <span className="font-bold text-gray-800">{formatIDR(item.total_tagihan)}</span>
                                 </div>
                                 <div className="flex justify-between text-[13px]">
                                     <span className="text-gray-500">Total Terbayar :</span>
-                                    <span className="font-bold text-[#428E5F]">{item.terbayar.toLocaleString('id-ID')}</span>
+                                    <span className="font-bold text-[#428E5F]">{formatIDR(item.terbayar)}</span>
                                 </div>
                                 <div className="flex justify-between text-[13px] pt-2 border-t border-gray-100">
                                     <span className="text-gray-500">Sisa Tagihan :</span>
-                                    <span className="font-bold text-red-600">{item.sisa.toLocaleString('id-ID')}</span>
+                                    <span className="font-bold text-red-600">{formatIDR(item.sisa)}</span>
                                 </div>
                             </div>
 

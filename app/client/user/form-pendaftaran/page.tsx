@@ -40,6 +40,9 @@ export default function RegistrationForm() {
   
   // State Error Global
   const [submitError, setSubmitError] = useState("");
+  
+  // State Errors untuk Step 1
+  const [fieldErrors, setFieldErrors] = useState<{[key: string]: string}>({});
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -131,7 +134,49 @@ export default function RegistrationForm() {
     return true;
   };
 
+  // VALIDASI STEP 1: Email, No HP, NISN, NIK, NO_KK
+  const validateStep1Fields = () => {
+    const errors: {[key: string]: string} = {};
+
+    // Validasi Email: harus ada @
+    if (formData.email && !formData.email.includes("@")) {
+      errors.email = "Email harus mengandung tanda @ (contoh: nama@gmail.com)";
+    }
+
+    // No HP: harus dimulai 08, minimal 10 digit, maksimal 15 digit
+    if (formData.no_hp) {
+      if (!formData.no_hp.startsWith("08")) {
+        errors.no_hp = "Nomor HP harus dimulai dengan 08";
+      } else if (formData.no_hp.length < 10 || formData.no_hp.length > 15) {
+        errors.no_hp = "Nomor HP harus 10-15 digit";
+      }
+    }
+
+    // Validasi NISN: harus 10 digit
+    if (formData.nisn && formData.nisn.length !== 10) {
+      errors.nisn = "NISN harus 10 digit";
+    }
+
+    // Validasi NIK: harus 16 digit
+    if (formData.nik && formData.nik.length !== 16) {
+      errors.nik = "NIK harus 16 digit";
+    }
+
+    // Validasi NO_KK: harus 16 digit
+    if (formData.no_kk && formData.no_kk.length !== 16) {
+      errors.no_kk = "No KK harus 16 digit";
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const nextStep = async () => { 
+    // Validasi khusus step 1
+    if (step === 1 && !validateStep1Fields()) {
+      return; // Jangan lanjut jika ada error
+    }
+    
     if (!isStepValid()) return;
     if (!validateYearLogic()) return;
     setNisnError("");
@@ -176,7 +221,27 @@ export default function RegistrationForm() {
     } else {
       setFormData(prev => ({ ...prev, [name]: numValue }));
     }
-    if (name === 'nisn') setNisnError("");
+    
+    // Real-time validation untuk no_hp
+    if (name === 'no_hp' && numValue) {
+      if (!numValue.startsWith("08")) {
+        setFieldErrors(prev => ({ ...prev, no_hp: "Nomor HP harus dimulai dengan 08" }));
+      } else if (numValue.length < 10 || numValue.length > 15) {
+        setFieldErrors(prev => ({ ...prev, no_hp: "Nomor HP harus 10-15 digit" }));
+      } else {
+        setFieldErrors(prev => ({ ...prev, no_hp: "" }));
+      }
+    }
+    
+    // Real-time validation untuk NISN
+    if (name === 'nisn') {
+      if (numValue && numValue.length !== 10) {
+        setFieldErrors(prev => ({ ...prev, nisn: "NISN harus 10 digit" }));
+      } else {
+        setFieldErrors(prev => ({ ...prev, nisn: "" }));
+      }
+      setNisnError("");
+    }
   };
 
   const handleChange = (e: any) => {
@@ -384,10 +449,47 @@ export default function RegistrationForm() {
                     {/* Batasi Angka */}
                     <InputGroup label="Anak Ke" name="anak_ke" value={formData.anak_ke} onChange={handleNumberChange} placeholder="Contoh: 1" maxLength={2} />
                     <InputGroup label="Jumlah Saudara" name="jumlah_saudara" value={formData.jumlah_saudara} onChange={handleNumberChange} placeholder="0" maxLength={2} />
-                    <InputGroup label="NIK" name="nik" value={formData.nik} onChange={handleNumberChange} placeholder="16 digit NIK" maxLength={16} />
-                    <InputGroup label="No KK" name="no_kk" value={formData.no_kk} onChange={handleNumberChange} placeholder="16 digit No KK" maxLength={16} />
-                    <InputGroup label="No HP (WA)" name="no_hp" value={formData.no_hp} onChange={handleNumberChange} placeholder="08xxxxxxxx" maxLength={15} />
-                    <InputGroup label="Email" name="email" value={formData.email} onChange={handleChange} placeholder="email@gmail.com" maxLength={100} />
+                    
+                    {/* NIK dengan validasi */}
+                    <div>
+                      <InputGroup label="NIK" name="nik" value={formData.nik} onChange={handleNumberChange} placeholder="16 digit NIK" maxLength={16} isError={!!fieldErrors.nik} />
+                      {fieldErrors.nik && (
+                        <div className="flex items-center gap-2 mt-2 text-red-500 text-xs font-medium animate-in slide-in-from-top-1">
+                          <AlertCircle size={14} /> {fieldErrors.nik}
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* No KK dengan validasi */}
+                    <div>
+                      <InputGroup label="No KK" name="no_kk" value={formData.no_kk} onChange={handleNumberChange} placeholder="16 digit No KK" maxLength={16} isError={!!fieldErrors.no_kk} />
+                      {fieldErrors.no_kk && (
+                        <div className="flex items-center gap-2 mt-2 text-red-500 text-xs font-medium animate-in slide-in-from-top-1">
+                          <AlertCircle size={14} /> {fieldErrors.no_kk}
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* No HP dengan validasi */}
+                    <div>
+                      <InputGroup label="No HP (WA)" name="no_hp" value={formData.no_hp} onChange={handleNumberChange} placeholder="08xxxxxxxx" maxLength={15} isError={!!fieldErrors.no_hp} />
+                      {fieldErrors.no_hp && (
+                        <div className="flex items-center gap-2 mt-2 text-red-500 text-xs font-medium animate-in slide-in-from-top-1">
+                          <AlertCircle size={14} /> {fieldErrors.no_hp}
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Email dengan validasi */}
+                    <div>
+                      <InputGroup label="Email" name="email" value={formData.email} onChange={handleChange} placeholder="email@gmail.com" maxLength={100} isError={!!fieldErrors.email} />
+                      {fieldErrors.email && (
+                        <div className="flex items-center gap-2 mt-2 text-red-500 text-xs font-medium animate-in slide-in-from-top-1">
+                          <AlertCircle size={14} /> {fieldErrors.email}
+                        </div>
+                      )}
+                    </div>
+                    
                     <div className="md:col-span-2"><InputGroup label="Alamat Lengkap" name="alamat_rumah" value={formData.alamat_rumah} onChange={handleChange} placeholder="Jl. Raya No. 1" maxLength={255} /></div>
                     
                     {/* Batasi RT/RW 5 karakter (Sesuai request agar aman database) */}
@@ -409,11 +511,11 @@ export default function RegistrationForm() {
                         onChange={handleNumberChange} 
                         placeholder="10 Digit NISN" 
                         maxLength={10} 
-                        isError={!!nisnError} 
+                        isError={!!fieldErrors.nisn || !!nisnError} 
                       />
-                      {nisnError && (
+                      {(fieldErrors.nisn || nisnError) && (
                         <div className="flex items-center gap-2 mt-2 text-red-500 text-xs font-medium animate-in slide-in-from-top-1">
-                          <AlertCircle size={14} /> {nisnError}
+                          <AlertCircle size={14} /> {fieldErrors.nisn || nisnError}
                         </div>
                       )}
                     </div>

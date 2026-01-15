@@ -33,9 +33,41 @@ export async function POST(req: Request) {
   try {
     const formData = await req.formData();
     const getVal = (key: string) => formData.get(key)?.toString() || "";
-    const nisn = getVal("nisn");
+    
+    // ===== VALIDASI SERVER-SIDE =====
+    // Email: harus ada @
+    const email = getVal("email");
+    if (!email.includes("@")) {
+      return NextResponse.json({ error: "Email harus mengandung tanda @" }, { status: 400 });
+    }
 
+    // No HP: harus dimulai 08, minimal 10 digit, maksimal 15 digit
+    const no_hp = getVal("no_hp");
+    if (!no_hp.startsWith("08")) {
+      return NextResponse.json({ error: "Nomor HP harus dimulai dengan 08" }, { status: 400 });
+    }
+    if (no_hp.length < 10 || no_hp.length > 15) {
+      return NextResponse.json({ error: "Nomor HP harus 10-15 digit" }, { status: 400 });
+    }
+
+    // NISN: harus 10 digit
+    const nisn = getVal("nisn");
     if (!nisn) return NextResponse.json({ error: "NISN Wajib diisi" }, { status: 400 });
+    if (nisn.length !== 10) {
+      return NextResponse.json({ error: "NISN harus 10 digit" }, { status: 400 });
+    }
+
+    // NIK: harus 16 digit
+    const nik = getVal("nik");
+    if (nik && nik.length !== 16) {
+      return NextResponse.json({ error: "NIK harus 16 digit" }, { status: 400 });
+    }
+
+    // NO_KK: harus 16 digit
+    const no_kk = getVal("no_kk");
+    if (no_kk && no_kk.length !== 16) {
+      return NextResponse.json({ error: "No KK harus 16 digit" }, { status: 400 });
+    }
 
     const existingSiswa = await prisma.tb_pendaftaran.findFirst({
       where: { nisn: nisn }

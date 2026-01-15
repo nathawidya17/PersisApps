@@ -40,10 +40,11 @@ function FormContent() {
   
   // --- STATE ERROR BARU ---
   const [errorMessage, setErrorMessage] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<{[key: string]: string}>({});
 
   // STATE DATA
   const [formData, setFormData] = useState<any>({
-    nama_lengkap: "", nisn: "", jenis_kelamin: "", tempat_lahir: "", tanggal_lahir: "", no_hp: "", alamat_rumah: "",
+    nama_lengkap: "", nisn: "", jenis_kelamin: "", tempat_lahir: "", tanggal_lahir: "", no_hp: "", alamat_rumah: "", rt: "", rw: "", nik: "", no_kk: "",
     asal_sekolah: "", alamat_sekolah: "", tahun_lulus: "", kode_pos_sekolah: "",
     nama_ayah: "", tempat_lahir_ayah: "", tanggal_lahir_ayah: "", pendidikan_ayah: "", pekerjaan_ayah: "", penghasilan_ayah: "",
     nama_ibu: "", tempat_lahir_ibu: "", tanggal_lahir_ibu: "", pendidikan_ibu: "", pekerjaan_ibu: "", penghasilan_ibu: "",
@@ -152,6 +153,7 @@ function FormContent() {
   const handleChange = (e: any) => {
     const { name, value } = e.target;
     setFormData((prev:any) => ({ ...prev, [name]: value }));
+    setFieldErrors(prev => ({ ...prev, [name]: "" })); // Clear error when user edits
   };
   
   const handleNumberChange = (e: any) => {
@@ -167,6 +169,19 @@ function FormContent() {
     } else {
       setFormData((prev: any) => ({ ...prev, [name]: numValue }));
     }
+    
+    // Real-time validation untuk no_hp
+    if (name === 'no_hp' && numValue) {
+      if (!numValue.startsWith("08")) {
+        setFieldErrors(prev => ({ ...prev, no_hp: "Nomor HP harus dimulai dengan 08" }));
+      } else if (numValue.length < 10 || numValue.length > 15) {
+        setFieldErrors(prev => ({ ...prev, no_hp: "Nomor HP harus 10-15 digit" }));
+      } else {
+        setFieldErrors(prev => ({ ...prev, no_hp: "" }));
+      }
+    } else {
+      setFieldErrors(prev => ({ ...prev, [name]: "" })); // Clear error when user edits
+    }
   };
 
   const handleDateChange = (name: string, date: Date | undefined) => {
@@ -178,8 +193,40 @@ function FormContent() {
     }
   };
 
+  // VALIDASI FIELDS
+  const validateFields = () => {
+    const errors: {[key: string]: string} = {};
+
+    // Email: harus ada @
+    if (formData.email && !formData.email.includes("@")) {
+      errors.email = "Email harus mengandung tanda @";
+    }
+
+    // No HP: harus dimulai 08, minimal 10 digit, maksimal 15 digit
+    if (formData.no_hp && formData.no_hp.length > 0) {
+      if (!formData.no_hp.startsWith("08")) {
+        errors.no_hp = "Nomor HP harus dimulai dengan 08";
+      } else if (formData.no_hp.length < 10 || formData.no_hp.length > 15) {
+        errors.no_hp = "Nomor HP harus 10-15 digit";
+      }
+    }
+
+    // NISN: harus 10 digit
+    if (formData.nisn && formData.nisn.length !== 10) {
+      errors.nisn = "NISN harus 10 digit";
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSubmit = async () => {
     setErrorMessage(""); // Reset error
+    
+    // Validasi fields
+    if (!validateFields()) {
+      return;
+    }
 
     if (selectedBillIds.length === 0) {
         setErrorMessage("Mohon pilih minimal satu tagihan.");
@@ -198,6 +245,7 @@ function FormContent() {
         submitData.append("nisn", formData.nisn);
         submitData.append("metode_pembayaran", paymentMethod);
         submitData.append("tagihan_ids", JSON.stringify(selectedBillIds));
+        submitData.append("jumlah_dibayar", formData.jumlah_dibayar || "0"); // TAMBAHAN: Kirim nominal yang user inputkan
         
         if (formData.bukti_pembayaran) {
             submitData.append("bukti_pembayaran", formData.bukti_pembayaran);
@@ -306,8 +354,29 @@ function FormContent() {
                           placeholder="Pilih Tanggal Lahir"
                         />
                         
-                        <InputGroup label="No HP (WA)" name="no_hp" value={formData.no_hp} onChange={handleNumberChange} />
+                        {/* No HP dengan error message */}
+                        <div>
+                          <InputGroup label="No HP (WA)" name="no_hp" value={formData.no_hp} onChange={handleNumberChange} isError={!!fieldErrors.no_hp} maxLength={15} />
+                          {fieldErrors.no_hp && (
+                            <div className="flex items-center gap-2 mt-2 text-red-500 text-xs font-medium">
+                              <AlertCircle size={14} /> {fieldErrors.no_hp}
+                            </div>
+                          )}
+                        </div>
+                        
                         <div className="md:col-span-2"><InputGroup label="Alamat Lengkap" name="alamat_rumah" value={formData.alamat_rumah} onChange={handleChange} /></div>
+                        
+                        {/* RT, RW, NIK, NO_KK */}
+                        <InputGroup label="RT" name="rt" value={formData.rt || ""} onChange={handleNumberChange} placeholder="00" />
+                        <InputGroup label="RW" name="rw" value={formData.rw || ""} onChange={handleNumberChange} placeholder="00" />
+                        
+                        <div>
+                          <InputGroup label="NIK" name="nik" value={formData.nik || ""} onChange={handleNumberChange} placeholder="16 digit NIK" />
+                        </div>
+                        
+                        <div>
+                          <InputGroup label="No KK" name="no_kk" value={formData.no_kk || ""} onChange={handleNumberChange} placeholder="16 digit No KK" />
+                        </div>
                     </div>
                   </div>
                 )}
