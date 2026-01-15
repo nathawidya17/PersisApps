@@ -59,7 +59,7 @@ export default function LandingPage() {
           <div className="relative w-full lg:w-1/2 flex justify-center items-end mt-4 lg:mt-0 h-[330px] lg:h-[764px]">
             <div className="relative w-[260px] h-full lg:w-[120%]">
               <Image 
-                src="/heroimage.png" 
+                src="/heromodel.png" 
                 alt="Siswa MA Persis" 
                 fill 
                 className="object-contain object-bottom z-30 drop-shadow-xl"

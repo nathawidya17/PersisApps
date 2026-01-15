@@ -5,10 +5,10 @@ import { useParams, useSearchParams, useRouter } from "next/navigation";
 import axios from "axios";
 import { 
   Check, X, Loader2, FileText, Download, 
-  Calendar, ArrowUpRight, Slash, Home, User, AlertCircle
+  Calendar, ArrowUpRight, User, AlertCircle, Eye, Printer 
 } from "lucide-react";
+import ReceiptModal from "@/components/ui/ReceiptModal"; 
 
-// Tipe Data untuk Toast
 type ToastType = {
   message: string;
   type: "success" | "error";
@@ -18,24 +18,31 @@ export default function DetailPembayaranPage() {
   const { nisn } = useParams();
   const searchParams = useSearchParams();
   const dateParam = searchParams.get("date");
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const router = useRouter();
 
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
+  // State untuk Nama Siswa
+  const [namaSiswa, setNamaSiswa] = useState("Siswa");
+
   // --- STATE MODAL & TOAST ---
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmActionType, setConfirmActionType] = useState<"Approved" | "Rejected" | null>(null);
   const [processing, setProcessing] = useState(false);
   const [notification, setNotification] = useState<ToastType | null>(null);
 
-  // --- HELPER NOTIFIKASI ---
+  // --- STATE MODAL (RECEIPT & BUKTI TF) ---
+  const [showReceipt, setShowReceipt] = useState(false);
+  const [showBuktiModal, setShowBuktiModal] = useState(false); 
+
   const showNotification = (message: string, type: "success" | "error") => {
     setNotification({ message, type });
     setTimeout(() => setNotification(null), 4000);
   };
 
-  // --- FETCH DATA ---
+  // --- FETCH DATA TRANSAKSI ---
   useEffect(() => {
     if (nisn && dateParam) {
       axios.post("/server/api/admin/pembayaran/detail", {
@@ -54,27 +61,36 @@ export default function DetailPembayaranPage() {
     }
   }, [nisn, dateParam]);
 
-  const totalNominal = items.reduce((acc, curr) => acc + curr.nominal, 0);
-  const buktiTransfer = items.length > 0 ? items[0].bukti : null;
+  // --- FETCH DATA SISWA ---
+  useEffect(() => {
+    if (nisn) {
+      axios.get(`/server/api/admin/DaftarSiswa/${nisn}`)
+        .then(res => {
+          const detail = res.data.detailSiswa;
+          if (detail && detail.nama_lengkap) {
+            setNamaSiswa(detail.nama_lengkap);
+          }
+        })
+        .catch(err => console.error("Gagal ambil nama siswa", err));
+    }
+  }, [nisn]);
 
-  // --- LOGIC PENGECEKAN STATUS ---
-  // Tombol hilang jika semua item sudah LUNAS atau DITOLAK
+  const totalNominal = items.reduce((acc, curr) => acc + curr.nominal, 0);
+  const buktiTransfer = items.length > 0 ? items[0].bukti : null; 
+
   const isTransactionCompleted = items.length > 0 && items.every((item: any) => item.status === 'lunas' || item.status === 'ditolak');
 
-  // --- HANDLER BUTTON KLIK ---
   const handleOpenConfirm = (type: "Approved" | "Rejected") => {
     setConfirmActionType(type);
     setShowConfirmModal(true);
   };
 
-  // --- LOGIC EKSEKUSI (FINAL FIX: Promise.allSettled) ---
   const executeBatchAction = async () => {
     if (!confirmActionType) return;
     setProcessing(true);
 
     try {
       const promises = items.map(item => {
-        // Skip item yang sudah selesai agar tidak double request
         if (item.status === 'lunas' || item.status === 'ditolak') return Promise.resolve();
         
         return axios.patch("/server/api/admin/pembayaran", {
@@ -85,14 +101,11 @@ export default function DetailPembayaranPage() {
         });
       });
 
-      // UPDATE PENTING: Pakai allSettled biar ga error 500 kalau ada race condition
       await Promise.allSettled(promises);
 
       setShowConfirmModal(false);
-      
       showNotification(`Proses selesai. Data berhasil diperbarui.`, "success");
 
-      // Reload halaman otomatis agar data sinkron dengan database
       setTimeout(() => {
           window.location.reload(); 
       }, 1000);
@@ -100,14 +113,12 @@ export default function DetailPembayaranPage() {
     } catch (error) {
       console.error("Error batch:", error);
       setShowConfirmModal(false);
-      // Tetap reload karena kemungkinan besar data sebagian sudah masuk
       window.location.reload();
     } finally {
       setProcessing(false);
     }
   };
 
-  // --- DOWNLOAD ---
   const handleDownloadBukti = async () => {
     if (!buktiTransfer) return;
     try {
@@ -159,9 +170,9 @@ export default function DetailPembayaranPage() {
       )}
 
       {/* --- HEADER SECTION --- */}
-      <div className=" border-b border-gray-100 px-8 py-6 sticky top-0 z-10">
-        
-       <p className="text-[10px] text-gray-400 mb-2 tracking-widest">Pembauaran / <span className="text-green-600">Detail Pembayaran</span></p>
+      {/* UPDATE: z-index diturunkan ke z-[1] dan ditambah bg-gray-100 agar tidak transparan */}
+      <div className="border-b border-gray-100 px-8 py-6 sticky top-0 z-[1] bg-gray-100">
+       <p className="text-[10px] text-gray-400 mb-2 tracking-widest">Pembayaran / <span className="text-green-600">Detail Pembayaran</span></p>
         <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-4">
             <div>
                 <h1 className="text-2xl font-bold text-gray-800 tracking-tight">Rincian Pembayaran</h1>
@@ -171,7 +182,6 @@ export default function DetailPembayaranPage() {
                 </p>
             </div>
 
-            {/* ACTION BUTTONS (Disembunyikan jika transaksi selesai) */}
             {!isTransactionCompleted && (
                 <div className="flex gap-3">
                     <button 
@@ -190,7 +200,6 @@ export default function DetailPembayaranPage() {
                 </div>
             )}
             
-            {/* TAMPILAN STATUS JIKA SELESAI */}
             {isTransactionCompleted && (
                  <div className="flex items-center gap-2 px-6 py-2 bg-gray-50 text-gray-500 rounded-xl border border-gray-200 cursor-default">
                     <Check size={16} strokeWidth={3} className="text-green-600"/>
@@ -221,10 +230,10 @@ export default function DetailPembayaranPage() {
                         </div>
                         <div className="px-4 text-right">
                             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">
-                                Jumlah Item
+                                Nama Siswa
                             </p>
                             <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-lg text-xs font-bold">
-                                {items.length} Pembayaran
+                                {namaSiswa}
                             </span>
                         </div>
                     </div>
@@ -274,48 +283,71 @@ export default function DetailPembayaranPage() {
                 </div>
             </div>
 
-            {/* KOLOM KANAN: BUKTI TRANSFER (Sticky) */}
+            {/* KOLOM KANAN: BUKTI TRANSFER / E-RECEIPT (Sticky) */}
             <div className="w-full lg:w-[350px]">
                 <div className="bg-white p-5 rounded-2xl shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] border border-gray-100 sticky top-32">
+                    
+                    {/* Header Kolom Kanan */}
                     <div className="flex justify-between items-center mb-5 pb-4 border-b border-gray-50">
-                        <h3 className="text-xs font-bold text-gray-800 uppercase tracking-widest flex items-center gap-2">
-                            <FileText size={14} className="text-[#068A50]"/> Bukti Transfer
-                        </h3>
+                        {buktiTransfer ? (
+                            <h3 className="text-xs font-bold text-gray-800 uppercase tracking-widest flex items-center gap-2">
+                                <FileText size={14} className="text-[#068A50]"/> Bukti Transfer
+                            </h3>
+                        ) : (
+                            <h3 className="text-xs font-bold text-gray-800 uppercase tracking-widest flex items-center gap-2">
+                                <Printer size={14} className="text-gray-800"/> E-Receipt
+                            </h3>
+                        )}
+
                         {buktiTransfer && (
-                            <button onClick={handleDownloadBukti} className="text-[10px] font-bold text-gray-500 hover:text-gray-800 hover:bg-gray-100 px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all">
+                            <button onClick={handleDownloadBukti} className="text-[10px] font-bold text-gray-500 hover:text-gray-800 hover:bg-gray-100 px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all cursor-pointer">
                                 <Download size={12}/> Unduh File
                             </button>
                         )}
                     </div>
+
+                    {/* Content Kolom Kanan */}
                     {buktiTransfer ? (
-                    <div className="relative rounded-xl overflow-hidden border border-gray-100 bg-[#F8F9FA] group">
-                        <div className="aspect-[3/5] w-full relative">
-                            <img src={buktiTransfer} alt="Bukti Transfer" className="w-full h-full object-contain p-2"/>
+                        <div className="relative rounded-xl overflow-hidden border border-gray-100 bg-[#F8F9FA] group">
+                            <div className="aspect-[3/5] w-full relative">
+                                <img src={buktiTransfer} alt="Bukti Transfer" className="w-full h-full object-contain p-2"/>
+                            </div>
+                            
+                            <button 
+                                onClick={() => setShowBuktiModal(true)} 
+                                className="absolute inset-0 bg-white/10 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center cursor-zoom-in"
+                            >
+                                <span className="bg-white text-gray-800 px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 shadow-xl transform scale-90 group-hover:scale-100 transition-transform">
+                                    <ArrowUpRight size={14}/> Lihat Ukuran Penuh
+                                </span>
+                            </button>
                         </div>
-                        <a href={buktiTransfer} target="_blank" rel="noreferrer" className="absolute inset-0 bg-white/10 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center cursor-zoom-in">
-                            <span className="bg-white text-gray-800 px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 shadow-xl transform scale-90 group-hover:scale-100 transition-transform">
-                                <ArrowUpRight size={14}/> Lihat Ukuran Penuh
-                            </span>
-                        </a>
-                    </div>
                     ) : (
-                    <div className="h-48 flex flex-col items-center justify-center text-gray-400 bg-[#F8F9FA] rounded-xl border-2 border-dashed border-gray-200">
-                        <FileText size={32} className="mb-2 opacity-20"/>
-                        <span className="text-xs font-medium opacity-50">Tidak ada bukti upload</span>
-                    </div>
+                        <div className="h-48 flex flex-col items-center justify-center text-gray-400 bg-[#F8F9FA] rounded-xl border-2 border-dashed border-gray-200 p-6 text-center">
+                            <div className="bg-white p-4 rounded-full shadow-sm mb-3">
+                                <FileText size={24} className="text-gray-400" />
+                            </div>
+                            <p className="text-xs text-gray-500 mb-4 font-medium leading-relaxed">
+                                Pembayaran ini dilakukan secara Tunai (Cash).
+                            </p>
+                            <button 
+                                onClick={() => setShowReceipt(true)}
+                                className="bg-gray-800 text-white px-6 py-2.5 rounded-lg text-xs font-bold shadow-lg hover:bg-black transition-all flex items-center gap-2 active:scale-95 cursor-pointer"
+                            >
+                                <Eye size={14} /> Lihat E-Receipt
+                            </button>
+                        </div>
                     )}
                 </div>
             </div>
         </div>
       </div>
 
-      {/* --- MODAL KONFIRMASI (STYLE BARU) --- */}
+      {/* --- MODAL KONFIRMASI --- */}
       {showConfirmModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowConfirmModal(false)}></div>
            <div className="relative bg-white rounded-[24px] w-full max-w-sm p-6 shadow-2xl text-center animate-in zoom-in duration-200">
-              
-              {/* IKON BESAR */}
               <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border-4 border-white ring-4 ${
                   confirmActionType === "Approved" ? "bg-[#FCD34D] ring-yellow-50" : "bg-[#9B1C1C] ring-red-50"
               }`}>
@@ -323,17 +355,14 @@ export default function DetailPembayaranPage() {
                     {confirmActionType === "Approved" ? "?" : "!"}
                  </span>
               </div>
-
               <h3 className="text-lg font-bold text-gray-800 mb-2">
                   {confirmActionType === "Approved" ? "Konfirmasi Approve" : "Konfirmasi Reject"}
               </h3>
-              
               <p className="text-xs text-gray-500 mb-8 leading-relaxed px-4">
                   {confirmActionType === "Approved" 
                     ? "Apakah Anda yakin ingin menyetujui transaksi ini?" 
                     : "Apakah Anda yakin ingin menolak transaksi ini? Tindakan tidak bisa dibatalkan."}
               </p>
-
               <div className="flex gap-3">
                  <button 
                     onClick={() => setShowConfirmModal(false)} 
@@ -341,7 +370,6 @@ export default function DetailPembayaranPage() {
                  >
                     Batalkan
                  </button>
-                 
                  <button 
                     onClick={executeBatchAction} 
                     disabled={processing}
@@ -358,6 +386,60 @@ export default function DetailPembayaranPage() {
            </div>
         </div>
       )}
+
+      {/* --- MODAL E-RECEIPT --- */}
+      <ReceiptModal 
+        isOpen={showReceipt} 
+        onClose={() => setShowReceipt(false)} 
+        data={{
+            id_transaksi: items[0]?.id || "TRX-000", 
+            nama_siswa: namaSiswa, // MENGGUNAKAN NAMA SISWA YANG BENAR
+            nisn: typeof nisn === 'string' ? nisn : "-",
+            tipe_pembayaran: items.map(i => i.nama || i.item).join(", ") || "Pembayaran Sekolah",
+            nominal: totalNominal,
+            tanggal: dateParam || new Date(),
+            status: items[0]?.status || 'pending',
+            operator: "Admin TU"
+        }}
+      />
+
+      {/* --- MODAL IMAGE VIEWER (BUKTI TF) --- */}
+      {showBuktiModal && buktiTransfer && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+            {/* Klik Backdrop buat tutup */}
+            <div className="absolute inset-0" onClick={() => setShowBuktiModal(false)}></div>
+            
+            <div className="relative w-full max-w-2xl max-h-[90vh] flex flex-col items-center pointer-events-none">
+                {/* Content Modal */}
+                <div className="pointer-events-auto relative">
+                    <button 
+                        onClick={() => setShowBuktiModal(false)}
+                        className="absolute -top-12 right-0 md:-right-12 text-white/80 hover:text-white transition-colors p-2 bg-white/10 rounded-full backdrop-blur-sm cursor-pointer"
+                    >
+                        <X size={24} />
+                    </button>
+
+                    <div className="bg-white p-2 rounded-xl shadow-2xl overflow-hidden w-auto h-auto flex items-center justify-center">
+                        <img 
+                            src={buktiTransfer} 
+                            alt="Bukti Transfer Full" 
+                            className="max-w-full max-h-[80vh] object-contain rounded-lg"
+                        />
+                    </div>
+                    
+                    <div className="mt-4 flex justify-center">
+                        <button 
+                            onClick={handleDownloadBukti}
+                            className="flex items-center gap-2 px-6 py-2.5 bg-white text-gray-900 rounded-full text-xs font-bold shadow-lg hover:bg-gray-100 transition-all cursor-pointer"
+                        >
+                            <Download size={16} /> Unduh Gambar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+      )}
+
     </div>
   );
 }

@@ -117,7 +117,10 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
                 jumlah_saudara: body.jumlah_saudara ? Number(body.jumlah_saudara) : undefined,
                 rt: body.rt,
                 rw: body.rw,
-                kode_pos: body.kode_pos
+                kode_pos: body.kode_pos,
+                
+                // === TAMBAHAN KHUSUS HAFALAN TAHFIDZ ===
+                jumlah_hafalan: body.jumlah_hafalan || null
             }
         });
 
