@@ -260,7 +260,7 @@ export default function DetailCalonSiswaPage() {
                 {isBantuan && (
                    <div className="bg-yellow-50 border border-yellow-100 p-2 rounded-lg mb-3">
                       <p className="text-[10px] text-yellow-700 font-bold flex items-center justify-center gap-1">
-                        <Gift size={12} /> Status Siswa Bantuan (Bypass Pembayaran)
+                        <Gift size={12} /> Status Siswa Bantuan 
                       </p>
                    </div>
                 )}

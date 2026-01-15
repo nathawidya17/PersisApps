@@ -15,7 +15,8 @@ export async function POST(req: Request) {
     });
 
     let dataSiswa = null;
-    let riwayatBayar: any[] = [];
+    let riwayatBayarDaftarUlang: any[] = [];
+    let riwayatBayarPendaftaran: any[] = []; // TAMBAHAN: Untuk cek cicilan pendaftaran
 
     // KONDISI A: Ketemu di tb_siswa (Sudah fix jadi siswa)
     if (siswa) {
@@ -38,17 +39,27 @@ export async function POST(req: Request) {
         alamat_sekolah: siswa.alamat_sekolah,
         status_siswa: siswa.tipe_siswa 
       };
-      riwayatBayar = siswa.tb_pembayaran_daftar_ulang;
+      riwayatBayarDaftarUlang = siswa.tb_pembayaran_daftar_ulang;
+      
+      // Ambil juga history pendaftaran dari tabel pendaftaran (via NISN) untuk kalkulasi total
+      const dataPendaftaranLama = await prisma.tb_pendaftaran.findFirst({
+          where: { nisn: nisn },
+          include: { tb_pembayaran_pendaftaran: true }
+      });
+      if(dataPendaftaranLama) {
+          riwayatBayarPendaftaran = dataPendaftaranLama.tb_pembayaran_pendaftaran;
+      }
+
     } 
     // KONDISI B: Masih Calon (Cari di tb_pendaftaran)
     else {
-      // PERBAIKAN DISINI: Include tb_daftar_ulang dan pembayarannya
       const pendaftar = await prisma.tb_pendaftaran.findFirst({
         where: { nisn: nisn },
         include: {
+            tb_pembayaran_pendaftaran: true, // INCLUDE PENTING
             tb_daftar_ulang: {
                 include: {
-                    tb_pembayaran_daftar_ulang: true // Ambil riwayat jika ada (walau 0)
+                    tb_pembayaran_daftar_ulang: true 
                 }
             }
         }
@@ -58,12 +69,8 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "NISN tidak ditemukan." }, { status: 404 });
       }
 
-      // CEK VALIDITAS:
-      // Boleh akses jika: 
-      // 1. Status seleksi 'diterima'
-      // 2. ATAU sudah ada record di tb_daftar_ulang (artinya sudah divalidasi admin atau bayar sebagian)
+      // Validasi akses (minimal status diterima atau sudah masuk daftar ulang)
       const sudahMasukDaftarUlang = pendaftar.tb_daftar_ulang.length > 0;
-
       if (pendaftar.status_seleksi !== 'diterima' && !sudahMasukDaftarUlang) {
         return NextResponse.json({ error: "Status siswa belum tahap Daftar Ulang." }, { status: 400 });
       }
@@ -88,12 +95,12 @@ export async function POST(req: Request) {
         status_siswa: pendaftar.tipe_siswa || 'reguler'
       };
       
-      // Ambil riwayat bayar dari tb_daftar_ulang (bisa jadi kosong array-nya kalau divalidasi admin tanpa bayar)
-      // Kita ambil index pertama karena relasinya one-to-many tapi logikanya one-to-one per siswa
+      // Ambil Riwayat Pendaftaran
+      riwayatBayarPendaftaran = pendaftar.tb_pembayaran_pendaftaran;
+
+      // Ambil Riwayat Daftar Ulang
       if (sudahMasukDaftarUlang) {
-          riwayatBayar = pendaftar.tb_daftar_ulang[0].tb_pembayaran_daftar_ulang;
-      } else {
-          riwayatBayar = [];
+          riwayatBayarDaftarUlang = pendaftar.tb_daftar_ulang[0].tb_pembayaran_daftar_ulang;
       }
     }
 
@@ -102,7 +109,7 @@ export async function POST(req: Request) {
         where: { status: 'aktif' } 
     });
 
-    // Filter tagihan berdasarkan gender (Seragam Putra/Putri)
+    // Filter tagihan berdasarkan gender
     jenisTagihan = filterTagihanByGender(jenisTagihan, dataSiswa.jenis_kelamin);
 
     // 3. Hitung Status Per Tagihan
@@ -110,30 +117,36 @@ export async function POST(req: Request) {
         let terbayar = 0;
         const namaTagihan = jt.nama_pembayaran.toLowerCase().trim();
 
-        // --- LOGIC: Pendaftaran AUTO LUNAS (Sesuai request) ---
+        // --- LOGIC PERBAIKAN: PENDAFTARAN ---
+        // Cek apakah ini tagihan pendaftaran?
         if (namaTagihan.includes("pendaftaran")) {
-             terbayar = jt.nominal; 
+             // Hitung total dari tabel tb_pembayaran_pendaftaran
+             terbayar = riwayatBayarPendaftaran
+                .filter((p) => p.status === 'lunas' || p.status === 'cicil')
+                .reduce((acc, curr) => acc + Number(curr.nominal), 0);
         } 
         else {
-             // Cek riwayat bayar (Baik dari tb_siswa maupun tb_daftar_ulang)
-             terbayar = riwayatBayar
+             // Tagihan Daftar Ulang (Infaq, Seragam, dll)
+             // Cek riwayat dari tabel tb_pembayaran_daftar_ulang
+             terbayar = riwayatBayarDaftarUlang
                 .filter((p) => p.id_jenis_pembayaran === jt.id_jenis_pembayaran && (p.status === 'lunas' || p.status === 'cicil'))
-                .reduce((acc, curr) => acc + curr.nominal, 0);
+                .reduce((acc, curr) => acc + Number(curr.nominal), 0);
         }
 
-        const sisa = Math.max(0, jt.nominal - terbayar);
+        const nominalTagihan = Number(jt.nominal);
+        const sisa = Math.max(0, nominalTagihan - terbayar);
 
         return {
             id: jt.id_jenis_pembayaran,
             nama: jt.nama_pembayaran,
-            total_tagihan: jt.nominal,
+            total_tagihan: nominalTagihan,
             terbayar: terbayar,
             sisa: sisa,
             status: sisa <= 0 ? 'Lunas' : terbayar > 0 ? 'Belum Lunas' : 'Belum Lunas'
         };
     });
 
-    // 4. Hitung Ringkasan
+    // 4. Hitung Ringkasan Global
     const totalSemua = listTagihan.reduce((acc, curr) => acc + curr.total_tagihan, 0);
     const terbayarSemua = listTagihan.reduce((acc, curr) => acc + curr.terbayar, 0);
 
