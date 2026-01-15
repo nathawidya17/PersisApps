@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { filterTagihanByGender } from "@/lib/validationByGender";
 
 export const dynamic = "force-dynamic";
 
@@ -37,8 +38,12 @@ export async function GET() {
             .filter(p => p.status === 'lunas')
             .reduce((acc, curr) => acc + curr.nominal, 0);
 
+        // Filter tagihan sesuai jenis kelamin untuk TARGET yang akurat
+        const tagihanForGender = filterTagihanByGender(jenisTagihan, siswa.jenis_kelamin);
+        const targetForStudent = tagihanForGender.reduce((a, b) => a + b.nominal, 0);
+
         const totalMasuk = uangPend + uangDU;
-        const isLunas = totalMasuk >= TARGET_TAGIHAN;
+        const isLunas = totalMasuk >= targetForStudent;
 
         return {
             ...siswa,

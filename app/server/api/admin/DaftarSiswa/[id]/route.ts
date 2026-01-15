@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { normalizeGender } from "@/lib/gender";
+import { filterTagihanByGender } from "@/lib/validationByGender";
 
 export const dynamic = "force-dynamic";
 
@@ -70,8 +71,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     };
 
     const jenisTagihan = await prisma.tb_jenis_pembayaran.findMany({ where: { status: 'aktif' } });
+    
+    // Filter tagihan berdasarkan jenis kelamin siswa
+    const jenisTagihanFiltered = filterTagihanByGender(jenisTagihan, siswa.jenis_kelamin);
 
-    return NextResponse.json({ detailSiswa: finalData, jenisTagihan });
+    return NextResponse.json({ detailSiswa: finalData, jenisTagihan: jenisTagihanFiltered });
 
   } catch (error: any) {
     console.error("Error Detail:", error);

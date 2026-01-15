@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma"; 
+import { prisma } from "@/lib/prisma";
+import { filterTagihanByGender } from "@/lib/validationByGender"; 
 
 export async function POST(request: Request) {
   try {
@@ -65,11 +66,14 @@ export async function POST(request: Request) {
     // --- JIKA LOLOS SEMUA VALIDASI ---
 
     // 2. Ambil tagihan Daftar Ulang
-    const listTagihan = await prisma.tb_jenis_pembayaran.findMany({
+    let listTagihan = await prisma.tb_jenis_pembayaran.findMany({
         orderBy: {
             id_jenis_pembayaran: 'asc'
         }
     });
+
+    // Filter tagihan berdasarkan gender (Seragam Putra/Putri)
+    listTagihan = filterTagihanByGender(listTagihan, siswa.jenis_kelamin);
 
     return NextResponse.json({ 
         success: true, 

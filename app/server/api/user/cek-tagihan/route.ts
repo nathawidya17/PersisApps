@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { filterTagihanByGender } from "@/lib/validationByGender";
 
 export async function POST(req: Request) {
   try {
@@ -97,9 +98,12 @@ export async function POST(req: Request) {
     }
 
     // 2. Ambil Semua Jenis Tagihan yang Aktif
-    const jenisTagihan = await prisma.tb_jenis_pembayaran.findMany({
+    let jenisTagihan = await prisma.tb_jenis_pembayaran.findMany({
         where: { status: 'aktif' } 
     });
+
+    // Filter tagihan berdasarkan gender (Seragam Putra/Putri)
+    jenisTagihan = filterTagihanByGender(jenisTagihan, dataSiswa.jenis_kelamin);
 
     // 3. Hitung Status Per Tagihan
     const listTagihan = jenisTagihan.map((jt) => {

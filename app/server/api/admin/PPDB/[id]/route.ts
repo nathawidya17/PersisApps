@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma"; 
+import { filterTagihanByGender } from "@/lib/validationByGender"; 
 
 // === GET: Ambil Detail Siswa ===
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -40,6 +41,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       return NextResponse.json({ error: "Data tidak ditemukan" }, { status: 404 });
     }
 
+    // Filter jenis pembayaran berdasarkan jenis kelamin pendaftar
+    const jenis_pembayaran_filtered = filterTagihanByGender(jenis_pembayaran, detail.jenis_kelamin);
+
     // --- LOGIKA STATUS PEMBAYARAN ---
     const dataBayar = detail.tb_pembayaran_pendaftaran && detail.tb_pembayaran_pendaftaran.length > 0 
       ? detail.tb_pembayaran_pendaftaran[0] 
@@ -68,7 +72,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       detail, 
       status_tahap,
       label_status_pembayaran,
-      jenis_pembayaran 
+      jenis_pembayaran: jenis_pembayaran_filtered 
     });
 
   } catch (error: any) {

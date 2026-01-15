@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { isValidTagihanForGender, filterTagihanByGender } from "@/lib/validationByGender";
 
 // GET (TETAP SAMA)
 export async function GET() {
@@ -75,6 +76,8 @@ export async function PATCH(request: Request) {
 
     const targetStatus = status === "Approved" ? "lunas" : (status === "Rejected" ? "ditolak" : "belum");
     let nisnSiswa = "";
+    let jenis_kelamin = "";
+    let tagihan_name = "";
 
     // 1. Update Status Transaksi
     if (type === "Pendaftaran") {
@@ -84,23 +87,39 @@ export async function PATCH(request: Request) {
         include: { tb_pendaftaran: true }
       });
       nisnSiswa = updated.tb_pendaftaran?.nisn;
+      jenis_kelamin = updated.tb_pendaftaran?.jenis_kelamin;
+      tagihan_name = "Biaya Pendaftaran";
     } else {
       const updated = await prisma.tb_pembayaran_daftar_ulang.update({
         where: { id_pembayaran_daftar_ulang: Number(id) },
         data: { status: targetStatus, approved_by: adminRealName },
-        include: { tb_siswa: true }
+        include: { 
+          tb_siswa: true,
+          tb_jenis_pembayaran: true,
+          tb_daftar_ulang: { include: { tb_pendaftaran: true } }
+        }
       });
-      nisnSiswa = updated.tb_siswa?.NISN || "";
+      nisnSiswa = updated.tb_siswa?.NISN || updated.tb_daftar_ulang?.tb_pendaftaran?.nisn;
+      jenis_kelamin = updated.tb_siswa?.jenis_kelamin || updated.tb_daftar_ulang?.tb_pendaftaran?.jenis_kelamin;
+      tagihan_name = updated.tb_jenis_pembayaran?.nama_pembayaran || "Daftar Ulang";
+
+      // Validasi bahwa tagihan sesuai dengan jenis kelamin siswa
+      if (jenis_kelamin && !isValidTagihanForGender(tagihan_name, jenis_kelamin)) {
+        return NextResponse.json({ 
+          error: `Tagihan "${tagihan_name}" tidak sesuai dengan jenis kelamin siswa (${jenis_kelamin})` 
+        }, { status: 400 });
+      }
     }
 
     // 2. LOGIKA UPDATE STATUS (FIXED)
     if (nisnSiswa) {
         console.log(`\n--- CEK STATUS (REVISI) UNTUK NISN: ${nisnSiswa} ---`);
 
-        // A. Hitung Total Tagihan Wajib
-        // HAPUS "200000 +" DARI SINI. KITA MURNI AMBIL DARI DATABASE TAGIHAN.
+        // A. Hitung Total Tagihan Wajib (hanya yang sesuai jenis kelamin siswa)
+        const siswaData = await prisma.tb_siswa.findUnique({ where: { NISN: nisnSiswa } });
         const jenisTagihan = await prisma.tb_jenis_pembayaran.findMany({ where: { status: 'aktif' } });
-        const totalTagihanWajib = jenisTagihan.reduce((acc, curr) => acc + curr.nominal, 0);
+        const tagihanForGender = filterTagihanByGender(jenisTagihan, siswaData?.jenis_kelamin);
+        const totalTagihanWajib = tagihanForGender.reduce((acc, curr) => acc + curr.nominal, 0);
         
         console.log(`1. Total Tagihan DB: Rp ${totalTagihanWajib.toLocaleString()}`);
 

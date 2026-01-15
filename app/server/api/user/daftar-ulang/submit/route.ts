@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma"; 
 import { createClient } from '@supabase/supabase-js';
+import { isValidTagihanForGender } from "@/lib/validationByGender";
 
 // --- KONFIGURASI SUPABASE ---
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -37,6 +38,12 @@ export async function POST(request: Request) {
 
     if (!pendaftar) {
       return NextResponse.json({ error: "Siswa tidak ditemukan" }, { status: 404 });
+    }
+
+    // Get jenis_kelamin from pendaftar (akan ada ketika di validasi)
+    const jenis_kelamin = pendaftar.jenis_kelamin;
+    if (!jenis_kelamin) {
+      return NextResponse.json({ error: "Data jenis kelamin siswa tidak ditemukan" }, { status: 400 });
     }
 
     // 3. Handle Upload File ke Supabase (Jika Transfer)
@@ -118,6 +125,13 @@ export async function POST(request: Request) {
           id_jenis_pembayaran: { in: tagihanIds },
         },
       });
+
+      // B1. Validasi bahwa semua tagihan sesuai dengan jenis kelamin siswa
+      for (const tagihan of detailTagihan) {
+        if (!isValidTagihanForGender(tagihan.nama_pembayaran, jenis_kelamin)) {
+          throw new Error(`Tagihan "${tagihan.nama_pembayaran}" tidak sesuai dengan jenis kelamin Anda.`);
+        }
+      }
 
       // C. Simpan Pembayaran (Looping async)
       await Promise.all(detailTagihan.map(async (tagihan) => {
