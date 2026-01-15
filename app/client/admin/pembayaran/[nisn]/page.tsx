@@ -78,7 +78,11 @@ export default function DetailPembayaranPage() {
   const totalNominal = items.reduce((acc, curr) => acc + curr.nominal, 0);
   const buktiTransfer = items.length > 0 ? items[0].bukti : null; 
 
-  const isTransactionCompleted = items.length > 0 && items.every((item: any) => item.status === 'lunas' || item.status === 'ditolak');
+  // --- PERBAIKAN LOGIC 1: Masukkan 'cicil' sebagai status selesai ---
+  // Transaksi dianggap selesai jika statusnya lunas, ditolak, ATAU cicil (artinya sudah diapprove admin)
+  const isTransactionCompleted = items.length > 0 && items.every((item: any) => 
+    ['lunas', 'ditolak', 'cicil'].includes(item.status)
+  );
 
   const handleOpenConfirm = (type: "Approved" | "Rejected") => {
     setConfirmActionType(type);
@@ -91,7 +95,8 @@ export default function DetailPembayaranPage() {
 
     try {
       const promises = items.map(item => {
-        if (item.status === 'lunas' || item.status === 'ditolak') return Promise.resolve();
+        // Skip jika status sudah final
+        if (['lunas', 'ditolak', 'cicil'].includes(item.status)) return Promise.resolve();
         
         return axios.patch("/server/api/admin/pembayaran", {
           id: item.id,
@@ -170,7 +175,6 @@ export default function DetailPembayaranPage() {
       )}
 
       {/* --- HEADER SECTION --- */}
-      {/* UPDATE: z-index diturunkan ke z-[1] dan ditambah bg-gray-100 agar tidak transparan */}
       <div className="border-b border-gray-100 px-8 py-6 sticky top-0 z-[1] bg-gray-100">
        <p className="text-[10px] text-gray-400 mb-2 tracking-widest">Pembayaran / <span className="text-green-600">Detail Pembayaran</span></p>
         <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-4">
@@ -182,6 +186,7 @@ export default function DetailPembayaranPage() {
                 </p>
             </div>
 
+            {/* Tombol hanya muncul jika transaksi BELUM selesai (completed) */}
             {!isTransactionCompleted && (
                 <div className="flex gap-3">
                     <button 
@@ -200,13 +205,12 @@ export default function DetailPembayaranPage() {
                 </div>
             )}
             
-          
-            
-            
             {isTransactionCompleted && (
                  <div className="flex items-center gap-2 px-6 py-2 bg-gray-50 text-gray-500 rounded-xl border border-gray-200 cursor-default">
                     <Check size={16} strokeWidth={3} className="text-green-600"/>
-                    <span className="text-xs font-bold uppercase tracking-wider">Transaksi Selesai</span>
+                    <span className="text-xs font-bold uppercase tracking-wider">
+                        {items.some(i => i.status === 'ditolak') ? 'Transaksi Ditolak' : 'Transaksi Disetujui'}
+                    </span>
                  </div>
             )}
         </div>
@@ -270,12 +274,15 @@ export default function DetailPembayaranPage() {
                                     <td className="px-6 py-5 text-right font-bold text-gray-800">
                                         IDR {item.nominal.toLocaleString('id-ID')}
                                     </td>
+                                    
+                                    {/* --- PERBAIKAN LOGIC 2: BADGE STATUS --- */}
                                     <td className="px-6 py-5 text-center">
                                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide border ${
-                                        item.status === 'lunas' ? 'bg-green-50 text-green-700 border-green-100' : 
+                                        // Status 'lunas' ATAU 'cicil' = Approved (Hijau)
+                                        ['lunas', 'cicil'].includes(item.status) ? 'bg-green-50 text-green-700 border-green-100' : 
                                         item.status === 'ditolak' ? 'bg-red-50 text-red-700 border-red-100' : 'bg-yellow-50 text-yellow-700 border-yellow-100'
                                     }`}>
-                                        {item.status === 'lunas' ? 'Approved' : item.status === 'ditolak' ? 'Rejected' : 'Pending'}
+                                        {['lunas', 'cicil'].includes(item.status) ? 'Approved' : item.status === 'ditolak' ? 'Rejected' : 'Pending'}
                                     </span>
                                     </td>
                                 </tr>

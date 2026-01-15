@@ -9,6 +9,7 @@ import {
   Search, Filter, Download, X, Loader2, Check, AlertCircle,
   FileText, Eye, FolderOpen, MoreHorizontal, Trash2
 } from "lucide-react";
+import * as XLSX from "xlsx"; // Import Library Excel
 
 export default function DetailCalonSiswaPage() {
   const params = useParams();
@@ -117,9 +118,6 @@ export default function DetailCalonSiswaPage() {
     }
   };
 
-  if (loading) return <div className="ml-64 p-10 text-gray-400 font-medium text-center">Memuat Detail...</div>;
-  if (error) return <div className="ml-64 p-10 text-red-500 text-center">{error}</div>;
-
   const s = data?.detail;
   const isDaftarUlang = data?.status_tahap === "Daftar Ulang";
   
@@ -189,6 +187,64 @@ export default function DetailCalonSiswaPage() {
 
   const prestasiList = s?.tb_prestasi_pendaftar || [];
 
+  // --- LOGIC EXPORT EXCEL ---
+  const handleExport = () => {
+    if (!s || !daftarTagihanFinal) return;
+
+    // 1. Data Header
+    const headerInfo = [
+      ["LAPORAN KEUANGAN CALON SISWA (PPDB)"],
+      [""],
+      ["Nama Lengkap", ": " + s.nama_lengkap],
+      ["NISN", ": " + (s.nisn || "-")],
+      ["Jalur", ": " + (s.jalur_pendaftaran || "-")],
+      ["Status Seleksi", ": " + (s.status_seleksi || "-")],
+      ["Tanggal Export", ": " + new Date().toLocaleDateString('id-ID')],
+      [""],
+      ["RINCIAN TAGIHAN"],
+    ];
+
+    // 2. Header Tabel
+    const tableHeader = [
+      ["No", "Nama Tagihan", "Total Tagihan (IDR)", "Sudah Terbayar (IDR)", "Sisa Tagihan (IDR)", "Status"]
+    ];
+
+    // 3. Isi Tabel
+    const tableRows = daftarTagihanFinal.map((jt: any, index: number) => {
+      const statusText = jt.lunas ? "LUNAS" : "BELUM LUNAS";
+      return [
+        index + 1,
+        jt.nama,
+        jt.total,
+        jt.terbayar,
+        jt.sisa,
+        statusText
+      ];
+    });
+
+    // 4. Footer Total
+    const footerRow = [
+      [""],
+      ["TOTAL KESELURUHAN", "", grandTotalTagihan, grandTotalTerbayar, grandSisaTagihan, ""]
+    ];
+
+    const finalData = [...headerInfo, ...tableHeader, ...tableRows, ...footerRow];
+    const ws = XLSX.utils.aoa_to_sheet(finalData);
+
+    // Auto-width
+    ws['!cols'] = [
+      { wch: 5 }, { wch: 30 }, { wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 15 }
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Laporan PPDB");
+    const cleanName = s.nama_lengkap.replace(/[^a-zA-Z0-9]/g, "_"); 
+    XLSX.writeFile(wb, `Laporan_PPDB_${s.nisn}_${cleanName}.xlsx`);
+  };
+
+  if (loading) return <div className="ml-64 p-10 text-gray-400 font-medium text-center">Memuat Detail...</div>;
+  if (error) return <div className="ml-64 p-10 text-red-500 text-center">{error}</div>;
+
   return (
     <div className="ml-64 bg-gray-100 min-h-screen pb-10 px-5 pt-5 antialiased font-sans relative">
       
@@ -237,7 +293,7 @@ export default function DetailCalonSiswaPage() {
         </div>
       </div>
 
-      {/* MODAL KONFIRMASI VALIDASI (UPDATED) */}
+      {/* MODAL KONFIRMASI VALIDASI */}
       {showConfirm && (
         <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-in fade-in" onClick={() => setShowConfirm(false)}></div>
@@ -426,7 +482,12 @@ export default function DetailCalonSiswaPage() {
                 </div>
                 <button className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-[8px] text-gray-400 text-sm hover:bg-gray-50"><Filter size={18} /> Filter</button>
               </div>
-              <button className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-[8px] text-gray-400 text-sm hover:bg-gray-50"><Download size={18} /> Export Data</button>
+              <button 
+                onClick={handleExport}
+                className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-[8px] text-gray-400 text-sm hover:bg-gray-50 cursor-pointer active:scale-95 transition-all"
+              >
+                <Download size={18} /> Export Data
+              </button>
             </div>
             <table className="w-full text-left">
               <thead>
@@ -586,7 +647,7 @@ function EmptyState({ message, subMessage, type = 'table' }: { message: string, 
     }
 
     return (
-        <table className="w-full h-ful l">
+        <table className="w-full h-full">
             <tbody>
                 <tr className="w-full">
                     <td colSpan={7} className="py-20 text-center w-full">

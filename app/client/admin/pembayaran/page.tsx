@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Search, Filter, Eye, Download, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import * as XLSX from "xlsx"; // Pastikan sudah install: npm install xlsx
 
 export default function PembayaranPage() {
   const [data, setData] = useState<any[]>([]);
@@ -26,14 +27,67 @@ export default function PembayaranPage() {
     }
   };
 
-  // Di dalam komponen PembayaranPage
-const filteredData = data
-  .filter(item => 
-    item.nama_siswa.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.nisn.includes(searchTerm)
-  )
-  // Tambahkan sort di sini agar data yang baru masuk (Need Approval) langsung naik ke atas
-  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  // Logic Filter & Sort (Terbaru Paling Atas)
+  const filteredData = data
+    .filter(item => 
+      item.nama_siswa.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.nisn.includes(searchTerm)
+    )
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  // --- FUNGSI EXPORT EXCEL ---
+  const handleExport = () => {
+    if (filteredData.length === 0) {
+      alert("Tidak ada data untuk diexport");
+      return;
+    }
+
+    // 1. Format Data untuk Excel (LENGKAP DENGAN RINCIAN ITEM)
+    const exportData = filteredData.map((item, index) => {
+      const dateObj = new Date(item.date);
+      
+      return {
+        "No": index + 1,
+        "Waktu Transaksi": dateObj.toLocaleDateString('id-ID', { 
+            day: '2-digit', month: 'long', year: 'numeric' 
+        }),
+        "Jam": dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+        "NISN": item.nisn,
+        "Nama Siswa": item.nama_siswa,
+        "Jumlah Item": item.jumlah_item,
+        // MENAMPILKAN APA SAJA ITEMNYA
+        "Rincian Item": item.list_items || "-", 
+        "Metode Pembayaran": (item.metode || "Cash").toUpperCase(),
+        "Total Nominal (IDR)": item.total_nominal,
+        "Status": item.status,
+      };
+    });
+
+    // 2. Buat Workbook dan Worksheet
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    
+    // Auto-width kolom biar rapi saat dibuka
+    const wscols = [
+        { wch: 5 },  // No
+        { wch: 20 }, // Waktu
+        { wch: 10 }, // Jam
+        { wch: 15 }, // NISN
+        { wch: 30 }, // Nama
+        { wch: 10 }, // Jml Item
+        { wch: 50 }, // Rincian Item (Dibuat Lebar)
+        { wch: 15 }, // Metode
+        { wch: 20 }, // Nominal
+        { wch: 15 }, // Status
+    ];
+    worksheet['!cols'] = wscols;
+
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Laporan Transaksi");
+
+    // 3. Download File
+    const timestamp = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(workbook, `Laporan_Transaksi_${timestamp}.xlsx`);
+  };
 
   if (loading) return <div className="ml-64 p-10 flex justify-center"><Loader2 className="animate-spin text-gray-400"/></div>;
 
@@ -54,8 +108,13 @@ const filteredData = data
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
            </div>
-           <button className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
-             <Download size={16}/> Export Report
+           
+           {/* Tombol Export */}
+           <button 
+             onClick={handleExport}
+             className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors active:scale-95 cursor-pointer"
+           >
+             <Download size={16}/> Export Data
            </button>
         </div>
 
@@ -66,6 +125,7 @@ const filteredData = data
               <th className="py-4 px-6 text-left whitespace-nowrap">NISN</th>
               <th className="py-4 px-6 text-left whitespace-nowrap">Siswa</th>
               <th className="py-4 px-6 text-center whitespace-nowrap">Waktu Transaksi</th>
+              <th className="py-4 px-6 text-center whitespace-nowrap">Metode</th>
               <th className="py-4 px-6 text-center whitespace-nowrap">Jumlah Item</th>
               <th className="py-4 px-6 text-left whitespace-nowrap">Total Nominal</th>
               <th className="py-4 px-6 text-center whitespace-nowrap">Status</th>
@@ -88,6 +148,17 @@ const filteredData = data
                 {/* Waktu */}
                 <td className="py-4 px-6 text-center">
                   {new Date(item.date).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute:'2-digit'})}
+                </td>
+
+                 {/* Metode */}
+                 <td className="py-4 px-6 text-center">
+                  <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                    item.metode?.toLowerCase() === 'transfer' 
+                    ? 'bg-blue-50 text-blue-600 border border-blue-100' 
+                    : 'bg-orange-50 text-orange-600 border border-orange-100'
+                  }`}>
+                    {item.metode || 'Cash'}
+                  </span>
                 </td>
 
                 {/* Jumlah Item */}

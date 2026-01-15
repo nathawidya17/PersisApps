@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import axios from "axios";
-import { displayGender, isMale, isFemale, normalizeGender } from "@/lib/gender";
+import { displayGender, isMale, isFemale } from "@/lib/gender";
 import { 
   Search, Filter, Download, Info, 
   Users, Mars, Venus, CreditCard,
@@ -78,77 +78,112 @@ export default function DaftarSiswaPage() {
 
   const paginatedData = filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  // --- EXPORT LOGIC (MENAMPILKAN SEMUA INFO TB_SISWA, TB_ORTU, TB_PRESTASI) ---
+  // --- EXPORT LOGIC BARU: MENGGUNAKAN API KHUSUS & TABEL BERTINGKAT ---
   const exportToExcel = async () => {
-    setIsExporting(true);
     try {
-        const detailPromises = filteredData.map(async (siswa) => {
-            try {
-                const res = await axios.get(`/server/api/admin/DaftarSiswa/${siswa.id_siswa || siswa.id}`);
-                const detail = res.data.detailSiswa;
-                const ortu = detail.tb_orang_tua?.[0] || {};
-                const prestasi = detail.tb_prestasi || [];
+        setIsExporting(true);
+        // 1. Panggil API Export Khusus
+        const response = await axios.get("/server/api/admin/DaftarSiswa/export");
+        const { siswa, ortu, prestasi, pembayaran } = response.data;
 
-                // Format List Prestasi
-                const prestasiStr = prestasi.map((p:any) => `${p.nama_prestasi} (${p.tingkat} - ${p.peringkat})`).join("; ");
-
-                return {
-                    // INFO TB_SISWA
-                    "NISN": detail.NISN,
-                    "Nama Lengkap": detail.nama_lengkap,
-                    "Email": detail.email || "-",
-                    "NIK": detail.nik || "-",
-                    "No KK": detail.no_kk || "-",
-                    "Tipe Siswa": detail.tipe_siswa,
-                    "Jalur Pendaftaran": detail.jalur_pendaftaran,
-                    "Jumlah Hafalan": detail.jumlah_hafalan || "-",
-                    "Status Pembayaran": detail.status_pembayaran === 'lunas' ? 'LUNAS' : 'BELUM LUNAS',
-                    "Tempat Lahir": detail.tempat_lahir,
-                    "Tanggal Lahir": detail.tanggal_lahir ? new Date(detail.tanggal_lahir).toLocaleDateString('id-ID') : "-",
-                    "Jenis Kelamin": displayGender(detail.jenis_kelamin),
-                    "Ukuran Baju": detail.ukuran_baju || "-",
-                    "No HP": detail.no_hp,
-                    "Alamat": detail.alamat,
-                    "RT/RW": `${detail.rt || '0'}/${detail.rw || '0'}`,
-                    "Kode Pos": detail.kode_pos || "-",
-                    "Anak Ke": detail.anak_ke,
-                    "Jumlah Saudara": detail.jumlah_saudara,
-                    "Asal Sekolah": detail.asal_sekolah,
-                    "Tahun Lulus": detail.tahun_lulus,
-                    "Alamat Sekolah": detail.alamat_sekolah,
-                    
-                    // INFO TB_ORANG_TUA
-                    "Nama Ayah": ortu.nama_ayah || "-",
-                    "HP Ortu": ortu.no_hp_orang_tua || "-",
-                    "Pendidikan Ayah": ortu.pendidikan_ayah || "-",
-                    "Pekerjaan Ayah": ortu.pekerjaan_ayah || "-",
-                    "Penghasilan Ayah": ortu.penghasilan_ayah || "-",
-                    "Nama Ibu": ortu.nama_ibu || "-",
-                    "Pendidikan Ibu": ortu.pendidikan_ibu || "-",
-                    "Pekerjaan Ibu": ortu.pekerjaan_ibu || "-",
-                    "Penghasilan Ibu": ortu.penghasilan_ibu || "-",
-
-                    // INFO TB_PRESTASI
-                    "Daftar Prestasi": prestasiStr || "-",
-                };
-            } catch (error) { return null; }
-        });
-
-        const results = await Promise.all(detailPromises);
-        const validResults = results.filter(r => r !== null);
-
-        if (validResults.length === 0) {
-            alert("Tidak ada data export");
+        if (!siswa || siswa.length === 0) {
+            alert("Tidak ada data siswa untuk diexport");
             setIsExporting(false);
             return;
         }
 
-        const ws = XLSX.utils.json_to_sheet(validResults);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Data Lengkap Siswa");
-        XLSX.writeFile(wb, `PPDB_Lengkap_${new Date().toISOString().slice(0,10)}.xlsx`);
+        const ws_data: any[][] = [];
+
+        // === A. TABEL DATA SISWA ===
+        ws_data.push(["DATA SISWA LENGKAP"]); // Judul
+        // Header
+        ws_data.push([
+            "NISN", "NAMA LENGKAP", "NIK", "NO KK", "JK", "TTL", 
+            "ALAMAT LENGKAP", "KODE POS", "HP SISWA", "EMAIL", 
+            "ASAL SEKOLAH", "THN LULUS", "UKURAN BAJU", "TIPE", "JALUR", "STATUS BAYAR"
+        ]);
+        
+        // Rows
+        siswa.forEach((s: any) => {
+            ws_data.push([
+                s["NISN"], s["Nama Lengkap"], s["NIK"], s["No KK"], s["JK"], s["TTL"],
+                s["Alamat"], s["Kode Pos"], s["No HP Siswa"], s["Email"],
+                s["Asal Sekolah"], s["Tahun Lulus"], s["Ukuran Baju"], s["Tipe Siswa"], s["Jalur"], s["Status Bayar"]
+            ]);
+        });
+
+        ws_data.push([]); // Spasi
+        ws_data.push([]); 
+
+        // === B. TABEL DATA ORANG TUA ===
+        ws_data.push(["DATA ORANG TUA"]); 
+        ws_data.push([
+            "SISWA TERKAIT", 
+            "NAMA AYAH", "TTL AYAH", "PEKERJAAN AYAH", "PENGHASILAN AYAH", "NO HP ORTU",
+            "NAMA IBU", "TTL IBU", "PEKERJAAN IBU", "PENGHASILAN IBU"
+        ]);
+
+        ortu.forEach((o: any) => {
+            ws_data.push([
+                o["Siswa Terkait"],
+                o["Nama Ayah"], o["TTL Ayah"], o["Pekerjaan Ayah"], o["Penghasilan Ayah"], o["No HP Ortu"],
+                o["Nama Ibu"], o["TTL Ibu"], o["Pekerjaan Ibu"], o["Penghasilan Ibu"]
+            ]);
+        });
+
+        ws_data.push([]); 
+        ws_data.push([]); 
+
+        // === C. TABEL DATA PRESTASI ===
+        ws_data.push(["DATA PRESTASI SISWA"]);
+        if (prestasi.length > 0) {
+            ws_data.push(["SISWA TERKAIT", "NAMA PRESTASI", "JENIS", "TINGKAT", "PERINGKAT", "TAHUN", "PENYELENGGARA"]);
+            prestasi.forEach((p: any) => {
+                ws_data.push([
+                    p["Siswa Terkait"], p["Nama Prestasi"], p["Jenis"], p["Tingkat"], p["Peringkat"], p["Tahun"], p["Penyelenggara"]
+                ]);
+            });
+        } else {
+            ws_data.push(["Tidak ada data prestasi tercatat"]);
+        }
+
+        ws_data.push([]); 
+        ws_data.push([]); 
+
+        // === D. TABEL RIWAYAT PEMBAYARAN ===
+        ws_data.push(["RIWAYAT PEMBAYARAN (TAGIHAN)"]);
+        if (pembayaran.length > 0) {
+            ws_data.push(["SISWA TERKAIT", "NAMA TAGIHAN", "NOMINAL (IDR)", "METODE", "STATUS", "TANGGAL BAYAR"]);
+            pembayaran.forEach((p: any) => {
+                ws_data.push([
+                    p["Siswa Terkait"], 
+                    p["Nama Tagihan"], 
+                    p["Nominal"], 
+                    p["Metode"]?.toUpperCase(), 
+                    p["Status"]?.toUpperCase(), 
+                    p["Tanggal Bayar"]
+                ]);
+            });
+        } else {
+            ws_data.push(["Belum ada riwayat pembayaran"]);
+        }
+
+        // GENERATE FILE
+        const worksheet = XLSX.utils.aoa_to_sheet(ws_data);
+        const workbook = XLSX.utils.book_new();
+
+        // Atur Lebar Kolom
+        worksheet['!cols'] = [
+            { wch: 15 }, { wch: 30 }, { wch: 20 }, { wch: 20 }, { wch: 10 }, 
+            { wch: 25 }, { wch: 40 }, { wch: 10 }, { wch: 15 }, { wch: 25 },
+            { wch: 25 }, { wch: 10 }, { wch: 10 }, { wch: 15 }, { wch: 15 }, { wch: 15 }
+        ];
+
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Laporan Daftar Siswa");
+        XLSX.writeFile(workbook, `Laporan_Siswa_Lengkap_${new Date().toISOString().slice(0,10)}.xlsx`);
 
     } catch (error) {
+        console.error("Export Error:", error);
         alert("Gagal export data.");
     } finally {
         setIsExporting(false);
@@ -192,9 +227,11 @@ export default function DaftarSiswaPage() {
               <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
             </div>
           </div>
+          
+          {/* TOMBOL EXPORT YANG SUDAH DIPERBAIKI */}
           <button onClick={exportToExcel} disabled={isExporting} className={`flex items-center justify-center gap-2 px-6 py-2 bg-white border border-gray-200 rounded-[8px] text-sm font-medium text-gray-600 hover:bg-gray-50 transition-all shrink-0 ${isExporting ? 'opacity-70' : ''}`}>
             {isExporting ? <Loader2 size={18} className="animate-spin"/> : <Download size={18} />}
-            {isExporting ? "Exporting..." : "Export Data"}
+            {isExporting ? "Menyusun Data..." : "Export Data"}
           </button>
         </div>
 
