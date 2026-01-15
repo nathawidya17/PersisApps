@@ -1,41 +1,30 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+// ... (Bagian import tetap sama)
+
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const resolvedParams = await params;
-    // INI ADALAH ID SISWA
     const id_siswa = parseInt(resolvedParams.id);
-
     const { searchParams } = new URL(req.url);
     const id_jenis = searchParams.get("tagihan");
 
-    if (!id_jenis) {
-      return NextResponse.json({ error: "ID Jenis Tagihan diperlukan" }, { status: 400 });
-    }
+    if (!id_jenis) return NextResponse.json({ error: "ID Jenis Tagihan diperlukan" }, { status: 400 });
 
-    // 1. Ambil Info Tagihan
-    const infoTagihan = await prisma.tb_jenis_pembayaran.findUnique({
-      where: { id_jenis_pembayaran: Number(id_jenis) }
-    });
+    // 1. Ambil Info Tagihan & Nama Siswa
+    const [infoTagihan, detailSiswa] = await Promise.all([
+      prisma.tb_jenis_pembayaran.findUnique({ where: { id_jenis_pembayaran: Number(id_jenis) } }),
+      prisma.tb_siswa.findUnique({ where: { id_siswa }, select: { nama_lengkap: true, NISN: true } })
+    ]);
 
-    // --- PERBAIKAN DISINI (Tambahkan : any[]) ---
     let gabunganRiwayat: any[] = []; 
-    // -------------------------------------------
 
     // KASUS A: Tagihan PENDAFTARAN (ID 1)
     if (Number(id_jenis) === 1) {
-        
-        // Cari NISN siswa ini dulu
-        const siswa = await prisma.tb_siswa.findUnique({
-            where: { id_siswa: id_siswa },
-            select: { NISN: true }
-        });
-
-        if (siswa) {
-            // Cari data pendaftaran aslinya via NISN
+        if (detailSiswa) {
             const pendaftaran = await prisma.tb_pendaftaran.findFirst({
-                where: { nisn: siswa.NISN }, 
+                where: { nisn: detailSiswa.NISN }, 
                 select: { id_pendaftar: true }
             });
 
@@ -53,20 +42,18 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
                     tanggal: item.tanggal_bayar || item.created_at,
                     metode_pembayaran: item.metode_pembayaran,
                     approved_by: item.approved_by,
-                    jenis_id: 1,
-                    sumber: 'pendaftaran'
+                    // Tambahkan flag E-Receipt jika Cash
+                    isCash: item.metode_pembayaran === 'cash',
+                    nama_siswa: detailSiswa.nama_lengkap,
+                    nisn_siswa: detailSiswa.NISN
                 }));
             }
         }
     } 
-    
-    // KASUS B: Tagihan DAFTAR ULANG (ID > 1)
+    // KASUS B: Tagihan DAFTAR ULANG
     else {
         const bayarDU = await prisma.tb_pembayaran_daftar_ulang.findMany({
-            where: { 
-                id_siswa: id_siswa, 
-                id_jenis_pembayaran: Number(id_jenis)
-            },
+            where: { id_siswa: id_siswa, id_jenis_pembayaran: Number(id_jenis) },
             orderBy: { created_at: 'desc' }
         });
 
@@ -78,18 +65,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
             tanggal: item.tanggal_bayar || item.created_at,
             metode_pembayaran: item.metode_pembayaran,
             approved_by: item.approved_by,
-            jenis_id: item.id_jenis_pembayaran,
-            sumber: 'daftar_ulang'
+            isCash: item.metode_pembayaran === 'cash',
+            nama_siswa: detailSiswa?.nama_lengkap || "Siswa",
+            nisn_siswa: detailSiswa?.NISN || "-"
         }));
     }
 
-    return NextResponse.json({ 
-      infoTagihan, 
-      riwayat: gabunganRiwayat 
-    });
-
+    return NextResponse.json({ infoTagihan, riwayat: gabunganRiwayat });
   } catch (error: any) {
-    console.error("Error Riwayat Siswa API:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

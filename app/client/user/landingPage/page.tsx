@@ -56,7 +56,7 @@ export default function LandingPage() {
           </div>
           
           {/* 2. MODEL IMAGE (Siswa) */}
-          <div className="relative w-full lg:w-1/2 flex justify-center items-end mt-4 lg:mt-0 h-[330px] lg:h-[764px]">
+          <div className="relative w-full lg:w-1/2 flex justify-center items-end mt-4 lg:mt-0 h-[390px] lg:h-[764px]">
             <div className="relative w-[260px] h-full lg:w-[120%]">
               <Image 
                 src="/heromodel.png" 
@@ -158,28 +158,33 @@ export default function LandingPage() {
       {/* ========================================= */}
       {/* BROSUR PPDB SECTION                       */}
       {/* ========================================= */}
-    <section className="px-4 py-16 lg:py-24 text-center lg:px-0">
-  <h2 className="text-[28px] lg:text-5xl font-black text-[#333333] mb-3">
-    Brosur PPDB
-  </h2>
-  <p className="max-w-2xl mx-auto text-[#777777] font-medium text-[13px] lg:text-base px-4 leading-relaxed">
-    Brosur resmi yang memuat informasi singkat mengenai profil madrasah, program
-    pendidikan, fasilitas, serta penerimaan peserta didik baru.
-  </p>
+      <section className="px-0 py-4 lg:py-20 text-center bg-white">
+        <div className="px-6 mb-2 lg:mb-8">
+          <h2 className="text-[26px] lg:text-5xl font-black text-[#333333] mb-0.5">
+            Brosur PPDB
+          </h2>
+          <p className="max-w-2xl mx-auto text-[#777777] font-medium text-[12px] lg:text-base leading-tight">
+            Profil madrasah dan informasi pendaftaran.
+          </p>
+        </div>
 
-  <div className="mt-8 lg:mt-16 w-full mx-auto relative flex justify-center px-4 lg:px-0">
-    <div className="relative w-full max-w-lg md:max-w-2xl lg:max-w-6xl h-[400px] md:h-[500px] lg:h-[800px] shadow-lg rounded-xl overflow-hidden lg:shadow-none lg:rounded-none lg:overflow-visible">
-      <Image
-        src="/brosurr.png"
-        alt="Brosur PPDB MA Persis Kudang"
-        fill
-        className="object-contain"
-        // Menambahkan priority jika ini adalah gambar penting di atas lipatan layar
-        priority 
-      />
-    </div>
-  </div>
-</section>
+        {/* CONTAINER BROSUR - MENGGUNAKAN ASPECT RATIO AGAR TIDAK ADA SPOT PUTIH */}
+        <div className="w-full mx-auto relative flex justify-center mt-2">
+          {/* KUNCI: 
+              - h-auto dan aspect-[4/3] (sesuaikan dengan bentuk brosurmu)
+              - w-[95%] agar hampir mentok tapi tetap rapi
+          */}
+          <div className="relative w-[95%] md:w-full lg:max-w-6xl aspect-[4/3] md:aspect-[16/9] lg:h-[1000px]">
+            <Image
+              src="/brosurr.png"
+              alt="Brosur PPDB MA Persis Kudang"
+              fill
+              className="object-contain"
+              priority 
+            />
+          </div>
+        </div>
+      </section>
 
       <Footer />
     </div>

@@ -22,17 +22,12 @@ export async function POST(req: Request) {
     }
 
     const isAlreadyDaftarUlang = pendaftaran.tb_daftar_ulang.length > 0;
-    
-    // --- LOGIC TAMBAHAN: CEK STATUS BANTUAN ---
-    // Jika tipe_siswa adalah 'bantuan', kita izinkan validasi tanpa cek pembayaran
     const isBantuan = pendaftaran.tipe_siswa === 'bantuan';
 
     // SKENARIO 1: MASUK TAHAP DAFTAR ULANG
     if (!isAlreadyDaftarUlang) {
       const isLunasPendaftaran = pendaftaran.tb_pembayaran_pendaftaran.some(p => p.status === 'lunas');
       
-      // LOGIC BARU: Jika BUKAN bantuan DAN BELUM lunas, maka tolak.
-      // Kalau bantuan = true, kondisi ini false, jadi lanjut (bypass).
       if (!isBantuan && !isLunasPendaftaran) {
         return NextResponse.json({ error: "Gagal: Biaya Pendaftaran belum lunas!" }, { status: 400 });
       }
@@ -44,18 +39,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true, message: "Siswa berhasil masuk tahap Daftar Ulang" });
     }
 
-    // SKENARIO 2: JADI SISWA TETAP
+    // SKENARIO 2: JADI SISWA TETAP (VALIDASI AKHIR)
     else {
       const idDaftarUlang = pendaftaran.tb_daftar_ulang[0].id_daftar_ulang;
       const pembayaranDU = pendaftaran.tb_daftar_ulang[0].tb_pembayaran_daftar_ulang;
       const hasPayment = pembayaranDU.some(p => p.status === 'lunas' || p.status === 'cicil');
 
-      // LOGIC BARU: Jika BUKAN bantuan DAN BELUM ada pembayaran, maka tolak.
       if (!isBantuan && !hasPayment) {
         return NextResponse.json({ error: "Gagal: Belum ada pembayaran Daftar Ulang" }, { status: 400 });
       }
 
-      const nisnSiswa = pendaftaran.nisn.substring(0, 10);
+      // --- FIX KUNCI: NISN JANGAN DIPOTONG ---
+      // Pakai NISN asli agar history pembayaran pendaftaran tidak hilang
+      const nisnSiswa = pendaftaran.nisn; 
+
       const existingSiswa = await prisma.tb_siswa.findUnique({
         where: { NISN: nisnSiswa }
       });
@@ -64,13 +61,11 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Siswa sudah terdaftar." }, { status: 400 });
       }
 
-      // --- PERBAIKAN LOGIC GENDER (SOLUSI ERROR TS) ---
+      // Normalisasi Gender untuk Enum
       let genderFixed = String(pendaftaran.jenis_kelamin); 
-      
       if (genderFixed === "Laki-laki" || genderFixed === "Laki laki") {
-          genderFixed = "Laki_laki"; // Format Enum yang diterima Prisma Schema tb_siswa
+          genderFixed = "Laki_laki"; 
       }
-      // -----------------------------------------------
 
       const result = await prisma.$transaction(async (tx) => {
         
@@ -80,7 +75,6 @@ export async function POST(req: Request) {
             NISN: nisnSiswa,
             nama_lengkap: pendaftaran.nama_lengkap,
             email: pendaftaran.email,
-            // Pastikan tipe siswa ('bantuan'/'reguler') masuk ke data siswa baru
             tipe_siswa: pendaftaran.tipe_siswa === 'bantuan' ? 'bantuan' : 'reguler',
             jalur_pendaftaran: pendaftaran.jalur_pendaftaran as any, 
             tempat_lahir: pendaftaran.tempat_lahir,
@@ -99,10 +93,7 @@ export async function POST(req: Request) {
             alamat_sekolah: pendaftaran.alamat_sekolah || "-",
             kode_pos_sekolah: pendaftaran.kode_pos_sekolah ? parseInt(pendaftaran.kode_pos_sekolah) : null,
             status_pembayaran: "belum_lunas",
-            
             jumlah_hafalan: pendaftaran.jumlah_hafalan,
-            // Hapus field sertifikat jika tidak ada di schema tb_siswa, atau biarkan jika ada
-            // sertifikat_tahfidz: pendaftaran.sertifikat_tahfidz 
           }
         });
 
@@ -143,13 +134,13 @@ export async function POST(req: Request) {
             }));
         }
 
-        // D. Update Pembayaran (Link ke Siswa Baru)
+        // D. Update Relasi Pembayaran Daftar Ulang
         await tx.tb_pembayaran_daftar_ulang.updateMany({
           where: { id_daftar_ulang: idDaftarUlang },
           data: { id_siswa: siswa.id_siswa }
         });
 
-        // E. Update Status Pendaftar
+        // E. Update Status Pendaftar (Selesai)
         await tx.tb_pendaftaran.update({
             where: { id_pendaftar: pendaftaran.id_pendaftar },
             data: { status_seleksi: 'diterima' }

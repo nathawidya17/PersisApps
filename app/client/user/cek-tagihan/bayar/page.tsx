@@ -65,20 +65,31 @@ export default function BayarPage() {
     return true;
   };
 
- const handleSubmit = async () => {
-    setErrorMessage(""); // Reset error
+ // ... (Bagian import dan state tetap sama)
+
+const handleSubmit = async () => {
+    setErrorMessage(""); 
 
     if (!isFormValid()) return;
 
     setLoading(true);
     const formData = new FormData();
-    // ... (kode append formData tetap sama) ...
+    
+    // --- PERBAIKAN LOGIC PEMBAGIAN NOMINAL CICILAN ---
+    const inputUser = parseInt(nominalBayar);
+    
+    // Jika user bayar cicilan (misal 50rb), kita update nominal di tiap itemnya
+    // Untuk case sederhana (1 item terpilih), nominal_bayar item tersebut diisi inputUser
+    const updatedItems = sessionData.items.map((item: any) => ({
+        ...item,
+        nominal_bayar: inputUser.toString() // Gunakan hasil ketikan user, bukan data session
+    }));
+
     formData.append("id_siswa", sessionData.siswa.id);
     formData.append("metode", metode.toLowerCase());
     formData.append("bank", BANK_INFO.nama);
     formData.append("pengirim", sessionData.siswa.nama); 
-    formData.append("nominal_bayar", nominalBayar);
-    formData.append("items", JSON.stringify(sessionData.items)); 
+    formData.append("items", JSON.stringify(updatedItems)); // Kirim items yang sudah diupdate nominalnya
     
     if (buktiFile && metode === 'Transfer') {
         formData.append("bukti", buktiFile);
@@ -87,24 +98,21 @@ export default function BayarPage() {
     try {
       const response = await axios.post("/server/api/user/bayar-tagihan", formData);
       
-      // --- LOGIC BARU: CEK APAKAH ADA ERROR DARI BACKEND MESKIPUN STATUS 200 ---
       if (response.data.error) {
-         setErrorMessage(response.data.error); // Tampilkan pesan merah
+         setErrorMessage(response.data.error);
       } else {
-         // Jika tidak ada error, baru redirect
          router.push("/client/user/success");
       }
-
     } catch (error: any) {
-      console.error("Submit Error:", error);
-      // Fallback untuk error server (500)
       const pesan = error.response?.data?.error || "Terjadi kesalahan sistem";
       setErrorMessage(pesan); 
-      
     } finally {
       setLoading(false);
     }
-  };
+};
+
+// ... (Sisa kodingan UI tetap sama)
+
   if (!sessionData) return null;
 
   return (

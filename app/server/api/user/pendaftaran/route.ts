@@ -79,18 +79,14 @@ export async function POST(req: Request) {
     }
 
     // --- DATA PREPARATION ---
-    
-    // 1. Mapping Jalur
     const jalurMap: Record<string, any> = { "Umum": "umum", "Tahfidz": "tahfidz", "Prestasi": "prestasi" };
     
-    // 2. Mapping Gender
     const genderRaw = getVal("jenis_kelamin"); 
     let fixedGender = genderRaw;
     if (genderRaw === "Laki-laki" || genderRaw === "Laki laki") {
         fixedGender = "Laki_laki"; 
     }
 
-    // 3. Prestasi Parsing
     const prestasiRaw = formData.get("prestasi");
     const prestasiListRaw = prestasiRaw ? JSON.parse(prestasiRaw as string) : [];
     const validPrestasiData = prestasiListRaw
@@ -114,13 +110,8 @@ export async function POST(req: Request) {
           email: getVal("email"),
           tempat_lahir: getVal("tempat_lahir"),
           tanggal_lahir: getVal("tanggal_lahir") ? new Date(getVal("tanggal_lahir")) : new Date(),
-          
           jenis_kelamin: fixedGender as any, 
-          
-          // === TAMBAHAN KHUSUS TAHFIDZ ===
           jumlah_hafalan: getVal("jumlah_hafalan") || null,
-          // ===============================
-
           ukuran_baju: getVal("ukuran_baju") as any,
           no_hp: getVal("no_hp"),
           alamat_rumah: getVal("alamat_rumah"),
@@ -164,7 +155,11 @@ export async function POST(req: Request) {
           id_pendaftaran: pendaftaran.id_pendaftar,
           nominal: nominalClean,
           metode_pembayaran: paymentMethod === 'transfer' ? 'transfer' : 'cash',
-          status: (paymentMethod === 'transfer' ? 'menunggu' : 'belum') as any,
+          
+          // --- FIX DISINI: JANGAN PAKAI 'menunggu' ---
+          // Status diatur ke 'belum' agar tampil sebagai 'NEED APPROVAL' di Admin
+          status: "belum", 
+          
           bukti_pembayaran: fileUrlMySQL,
           tanggal_bayar: new Date(),
           created_at: new Date()

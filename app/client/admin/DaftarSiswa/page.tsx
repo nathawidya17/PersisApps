@@ -60,10 +60,9 @@ export default function DaftarSiswaPage() {
       const matchTipe = filterTipe === "Semua" || (s.tipe_siswa?.toLowerCase() || "") === filterTipe.toLowerCase();
       const matchJalur = filterJalur === "Semua" || (s.jalur_pendaftaran?.toLowerCase() || "") === filterJalur.toLowerCase();
       
-      // Filter Status (Case insensitive & logic fix)
       let matchStatus = true;
       if (filterStatus !== "Semua") {
-          const statusLower = s.status_pembayaran?.toLowerCase(); // lunas / belum_lunas
+          const statusLower = s.status_pembayaran?.toLowerCase();
           matchStatus = statusLower === filterStatus.toLowerCase();
       }
 
@@ -79,7 +78,7 @@ export default function DaftarSiswaPage() {
 
   const paginatedData = filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  // --- EXPORT LOGIC ---
+  // --- EXPORT LOGIC (MENAMPILKAN SEMUA INFO TB_SISWA, TB_ORTU, TB_PRESTASI) ---
   const exportToExcel = async () => {
     setIsExporting(true);
     try {
@@ -89,22 +88,46 @@ export default function DaftarSiswaPage() {
                 const detail = res.data.detailSiswa;
                 const ortu = detail.tb_orang_tua?.[0] || {};
                 const prestasi = detail.tb_prestasi || [];
-                const dokumen = detail.tb_dokumen || [];
 
-                const prestasiStr = prestasi.map((p:any) => `${p.nama_prestasi} (${p.tingkat})`).join("; ");
-                const dokumenStr = dokumen.map((d:any) => d.jenis_dokumen).join("; ");
+                // Format List Prestasi
+                const prestasiStr = prestasi.map((p:any) => `${p.nama_prestasi} (${p.tingkat} - ${p.peringkat})`).join("; ");
 
                 return {
+                    // INFO TB_SISWA
                     "NISN": detail.NISN,
                     "Nama Lengkap": detail.nama_lengkap,
-                    "Jenis Kelamin": displayGender(detail.jenis_kelamin),
-                    "Status Pembayaran": siswa.status_pembayaran === 'lunas' ? 'LUNAS' : 'BELUM LUNAS',
+                    "Email": detail.email || "-",
                     "Tipe Siswa": detail.tipe_siswa,
-                    "Jalur": detail.jalur_pendaftaran,
-                    "Nama Ayah": ortu.nama_ayah || "-",
-                    "Nama Ibu": ortu.nama_ibu || "-",
+                    "Jalur Pendaftaran": detail.jalur_pendaftaran,
+                    "Jumlah Hafalan": detail.jumlah_hafalan || "-",
+                    "Status Pembayaran": detail.status_pembayaran === 'lunas' ? 'LUNAS' : 'BELUM LUNAS',
+                    "Tempat Lahir": detail.tempat_lahir,
+                    "Tanggal Lahir": detail.tanggal_lahir ? new Date(detail.tanggal_lahir).toLocaleDateString('id-ID') : "-",
+                    "Jenis Kelamin": displayGender(detail.jenis_kelamin),
+                    "Ukuran Baju": detail.ukuran_baju || "-",
                     "No HP": detail.no_hp,
-                    "Prestasi": prestasiStr || "-",
+                    "Alamat": detail.alamat,
+                    "RT/RW": `${detail.rt || '0'}/${detail.rw || '0'}`,
+                    "Kode Pos": detail.kode_pos || "-",
+                    "Anak Ke": detail.anak_ke,
+                    "Jumlah Saudara": detail.jumlah_saudara,
+                    "Asal Sekolah": detail.asal_sekolah,
+                    "Tahun Lulus": detail.tahun_lulus,
+                    "Alamat Sekolah": detail.alamat_sekolah,
+                    
+                    // INFO TB_ORANG_TUA
+                    "Nama Ayah": ortu.nama_ayah || "-",
+                    "HP Ortu": ortu.no_hp_orang_tua || "-",
+                    "Pendidikan Ayah": ortu.pendidikan_ayah || "-",
+                    "Pekerjaan Ayah": ortu.pekerjaan_ayah || "-",
+                    "Penghasilan Ayah": ortu.penghasilan_ayah || "-",
+                    "Nama Ibu": ortu.nama_ibu || "-",
+                    "Pendidikan Ibu": ortu.pendidikan_ibu || "-",
+                    "Pekerjaan Ibu": ortu.pekerjaan_ibu || "-",
+                    "Penghasilan Ibu": ortu.penghasilan_ibu || "-",
+
+                    // INFO TB_PRESTASI
+                    "Daftar Prestasi": prestasiStr || "-",
                 };
             } catch (error) { return null; }
         });
@@ -120,8 +143,8 @@ export default function DaftarSiswaPage() {
 
         const ws = XLSX.utils.json_to_sheet(validResults);
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Data Siswa");
-        XLSX.writeFile(wb, `Data_Siswa_PPDB_${new Date().toISOString().slice(0,10)}.xlsx`);
+        XLSX.utils.book_append_sheet(wb, ws, "Data Lengkap Siswa");
+        XLSX.writeFile(wb, `PPDB_Lengkap_${new Date().toISOString().slice(0,10)}.xlsx`);
 
     } catch (error) {
         alert("Gagal export data.");
@@ -136,7 +159,6 @@ export default function DaftarSiswaPage() {
     <div className="ml-64 bg-gray-100 min-h-screen pb-10 px-5 pt-5 antialiased font-sans">
       <h2 className="text-xl font-bold text-gray-800 mb-5">Daftar Siswa</h2>
       
-      {/* 1. Stat Cards */}
       <div className="flex flex-wrap gap-5 mb-5">
         <StatCard label="Total Siswa" value={stats.total} icon={<Users size={22} />} iconBg="bg-green-50" iconColor="text-green-600" />
         <StatCard label="Siswa Laki-laki" value={stats.putra} icon={<Mars size={22} />} iconBg="bg-yellow-50" iconColor="text-yellow-600" />
@@ -144,16 +166,13 @@ export default function DaftarSiswaPage() {
         <StatCard label="Siswa Belum Lunas" value={stats.belumLunas} icon={<CreditCard size={22} />} iconBg="bg-indigo-50" iconColor="text-indigo-600" />
       </div>
 
-      {/* 2. Table Section */}
-      <div className="bg-white p-6 rounded-[12px] shadow-sm border border-gray-100 mb-5 overflow-hidden">
+      <div className="bg-white p-6 rounded-[12px] shadow-sm border border-gray-100 mb-5 overflow-hidden text-left">
         <div className="flex flex-col xl:flex-row justify-between gap-5">
-          {/* FILTERING */}
           <div className="flex flex-1 gap-3 flex-wrap">
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-              <input type="text" placeholder="Cari..." className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-[8px] text-sm focus:outline-none focus:ring-1 focus:ring-green-600" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+              <input type="text" placeholder="Cari NISN atau Nama..." className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-[8px] text-sm focus:outline-none focus:ring-1 focus:ring-green-600" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
             </div>
-            {/* Filter Gender */}
             <div className="relative">
               <select className="appearance-none pl-10 pr-8 py-2 bg-gray-50 border border-gray-200 rounded-[8px] text-sm focus:outline-none cursor-pointer w-full" value={filterGender} onChange={(e) => setFilterGender(e.target.value)}>
                 <option value="Semua">Semua Gender</option>
@@ -162,12 +181,11 @@ export default function DaftarSiswaPage() {
               </select>
               <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
             </div>
-            {/* Filter Status */}
             <div className="relative">
               <select className="appearance-none pl-10 pr-8 py-2 bg-gray-50 border border-gray-200 rounded-[8px] text-sm focus:outline-none cursor-pointer w-full" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
                 <option value="Semua">Semua Status</option>
                 <option value="lunas">Lunas</option>
-                <option value="belum_lunas">Belum</option>
+                <option value="belum_lunas">Belum Lunas</option>
               </select>
               <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
             </div>
@@ -178,19 +196,18 @@ export default function DaftarSiswaPage() {
           </button>
         </div>
 
-        {/* --- TABLE CONTENT (PERBAIKAN 1 BARIS: whitespace-nowrap) --- */}
         <div className="overflow-x-auto mt-6">
             <table className="w-full border-collapse">
             <thead>
                 <tr className="text-[#94A3B8] border-b border-gray-50 text-[10px]">
-                <th className="text-left py-4 px-6 font-normal tracking-widest whitespace-nowrap">NISN</th>
-                <th className="text-left py-4 px-6 font-normal tracking-widest whitespace-nowrap">Nama Siswa</th>
-                <th className="text-center py-4 px-6 font-normal tracking-widest whitespace-nowrap">Jenis Kelamin</th>
-                <th className="text-left py-4 px-6 font-normal tracking-widest whitespace-nowrap">Tempat, Tanggal Lahir</th>
-                <th className="text-center py-4 px-6 font-normal tracking-widest whitespace-nowrap">Tipe Siswa</th>
-                <th className="text-center py-4 px-6 font-normal tracking-widest whitespace-nowrap">Jalur</th>
-                <th className="text-center py-4 px-6 font-normal tracking-widest whitespace-nowrap">Status Bayar</th>
-                <th className="text-center py-4 px-6 font-normal tracking-widest whitespace-nowrap">Detail</th>
+                <th className="text-left py-4 px-6 font-normal tracking-widest whitespace-nowrap uppercase">NISN</th>
+                <th className="text-left py-4 px-6 font-normal tracking-widest whitespace-nowrap uppercase">Nama Siswa</th>
+                <th className="text-center py-4 px-6 font-normal tracking-widest whitespace-nowrap uppercase">Jenis Kelamin</th>
+                <th className="text-left py-4 px-6 font-normal tracking-widest whitespace-nowrap uppercase">Tempat, Tanggal Lahir</th>
+                <th className="text-center py-4 px-6 font-normal tracking-widest whitespace-nowrap uppercase">Tipe Siswa</th>
+                <th className="text-center py-4 px-6 font-normal tracking-widest whitespace-nowrap uppercase">Jalur</th>
+                <th className="text-center py-4 px-6 font-normal tracking-widest whitespace-nowrap uppercase">Status Bayar</th>
+                <th className="text-center py-4 px-6 font-normal tracking-widest whitespace-nowrap uppercase">Detail</th>
                 </tr>
             </thead>
             <tbody className="divide-y divide-gray-50 text-[#3b3b3b]">
@@ -198,70 +215,51 @@ export default function DaftarSiswaPage() {
                 paginatedData.map((item, i) => (
                     <tr key={i} className="hover:bg-gray-50/20 transition-colors duration-200">
                     <td className="py-4 px-6 text-[12px] font-normal whitespace-nowrap">{item.NISN}</td>
-                    
-                    {/* TRUNCATE NAME AGAR TIDAK TURUN BARIS */}
-                    <td className="py-4 px-6 text-[13px] font-medium whitespace-nowrap max-w-[200px] truncate" title={item.nama_lengkap}>
-                        {item.nama_lengkap}
-                    </td>
-                    
+                    <td className="py-4 px-6 text-[13px] font-medium whitespace-nowrap max-w-[200px] truncate" title={item.nama_lengkap}>{item.nama_lengkap}</td>
                     <td className="py-4 px-6 text-center whitespace-nowrap">
-                                <span className={`px-3 py-1 rounded-full text-[10px] font-bold ${
-                        isMale(item.jenis_kelamin) ? 'bg-indigo-50 text-indigo-500' : 'bg-orange-50 text-orange-500'
-                        }`}>
-                        {displayGender(item.jenis_kelamin)}
+                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold ${isMale(item.jenis_kelamin) ? 'bg-indigo-50 text-indigo-500' : 'bg-orange-50 text-orange-500'}`}>
+                          {displayGender(item.jenis_kelamin)}
                         </span>
                     </td>
-                    <td className="py-4 px-6 text-[12px] font-normal whitespace-nowrap">
-                        {item.tempat_lahir}, {item.tanggal_lahir ? new Date(item.tanggal_lahir).toLocaleDateString('id-ID') : "-"}
-                    </td>
+                    <td className="py-4 px-6 text-[12px] font-normal whitespace-nowrap">{item.tempat_lahir}, {item.tanggal_lahir ? new Date(item.tanggal_lahir).toLocaleDateString('id-ID') : "-"}</td>
                     <td className="py-4 px-6 text-center whitespace-nowrap">
                         <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-gray-50 text-gray-500 capitalize">{item.tipe_siswa || "-"}</span>
                     </td>
                     <td className="py-4 px-6 text-center text-[12px] font-normal capitalize whitespace-nowrap">{item.jalur_pendaftaran}</td>
-                    
-                    {/* STATUS PEMBAYARAN */}
                     <td className="py-4 px-6 text-center whitespace-nowrap">
-                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${
-                            item.status_pembayaran === 'lunas' ? 'text-green-600 bg-green-50' : 'text-red-500 bg-red-50'
-                        }`}>
+                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${item.status_pembayaran === 'lunas' ? 'text-green-600 bg-green-50' : 'text-red-500 bg-red-50'}`}>
                             {item.status_pembayaran === 'lunas' ? 'LUNAS' : 'BELUM LUNAS'}
                         </span>
                     </td>
-                    
                     <td className="py-4 px-6 text-center whitespace-nowrap">
                         <Link href={`/client/admin/DaftarSiswa/${item.id_siswa || item.id || item.NISN}`}>
-                        <button className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors">
-                            <Info size={18} />
-                        </button>
+                        <button className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"><Info size={18} /></button>
                         </Link>
                     </td>
                     </tr>
                 ))
                 ) : (
-                <tr>
-                    <td colSpan={8} className="py-20 text-center text-gray-400 text-sm italic">Data siswa tidak ditemukan</td>
-                </tr>
+                <tr><td colSpan={8} className="py-20 text-center text-gray-400 text-sm italic">Data siswa tidak ditemukan</td></tr>
                 )}
             </tbody>
             </table>
         </div>
 
-        {/* Pagination UI */}
         <div className="flex items-center justify-between px-8 py-6 border-t border-gray-50">
           <p className="text-[12px] text-gray-400 font-medium">
             {filteredData.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}-{Math.min(currentPage * itemsPerPage, filteredData.length)} of {filteredData.length} items
           </p>
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-1">
-              <button disabled={currentPage === 1} onClick={() => setCurrentPage(1)} className="p-1 text-gray-400 hover:text-green-600 disabled:opacity-30"><ChevronsLeft size={18}/></button>
-              <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => Math.max(1, p - 1))} className="p-1 text-gray-400 hover:text-green-600 disabled:opacity-30"><ChevronLeft size={18}/></button>
+              <button disabled={currentPage === 1} onClick={() => setCurrentPage(1)} className="p-1 text-gray-400 hover:text-green-600 disabled:opacity-30 cursor-pointer"><ChevronsLeft size={18}/></button>
+              <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => Math.max(1, p - 1))} className="p-1 text-gray-400 hover:text-green-600 disabled:opacity-30 cursor-pointer"><ChevronLeft size={18}/></button>
               <div className="flex items-center gap-2 px-2">
                 {[...Array(totalPages)].map((_, idx) => (
-                  <button key={idx} onClick={() => setCurrentPage(idx + 1)} className={`w-7 h-7 flex items-center justify-center rounded-lg text-xs font-bold transition-all ${currentPage === idx + 1 ? 'bg-green-50 text-green-600' : 'text-gray-400 hover:bg-gray-50'}`}>{idx + 1}</button>
+                  <button key={idx} onClick={() => setCurrentPage(idx + 1)} className={`w-7 h-7 flex items-center justify-center rounded-lg text-xs font-bold transition-all cursor-pointer ${currentPage === idx + 1 ? 'bg-green-50 text-green-600' : 'text-gray-400 hover:bg-gray-50'}`}>{idx + 1}</button>
                 ))}
               </div>
-              <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} className="p-1 text-gray-400 hover:text-green-600 disabled:opacity-30"><ChevronRight size={18}/></button>
-              <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(totalPages)} className="p-1 text-gray-400 hover:text-green-600 disabled:opacity-30"><ChevronsRight size={18}/></button>
+              <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} className="p-1 text-gray-400 hover:text-green-600 disabled:opacity-30 cursor-pointer"><ChevronRight size={18}/></button>
+              <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(totalPages)} className="p-1 text-gray-400 hover:text-green-600 disabled:opacity-30 cursor-pointer"><ChevronsRight size={18}/></button>
             </div>
             <div className="text-[12px] text-gray-400 flex items-center gap-2">
                <div className="relative">
@@ -275,14 +273,14 @@ export default function DaftarSiswaPage() {
           </div>
         </div>
       </div>
-      <footer className="mt-8 text-[11px] text-gray-400">© MA PERSIS KUDANG</footer>
+      <footer className="mt-8 text-[11px] text-gray-400 text-left">© MA PERSIS KUDANG</footer>
     </div>
   );
 }
 
 function StatCard({ label, value, icon, iconBg, iconColor }: any) {
   return (
-    <div style={{ width: '268.25px', height: '108px' }} className="bg-white px-[20px] py-[24px] rounded-[12px] shadow-sm border border-gray-100 flex items-center gap-4 transition-all hover:shadow-md">
+    <div style={{ width: '268.25px', height: '108px' }} className="bg-white px-[20px] py-[24px] rounded-[12px] shadow-sm border border-gray-100 flex items-center gap-4 transition-all hover:shadow-md text-left">
       <div className={`w-11 h-11 ${iconBg} ${iconColor} rounded-full flex items-center justify-center flex-shrink-0`}>{icon}</div>
       <div className="overflow-hidden">
         <p className="text-[18px] font-bold text-gray-800 leading-none truncate">{(value || 0).toLocaleString('id-ID')}</p>

@@ -6,7 +6,7 @@ export async function POST(req: Request) {
   try {
     const { nisn } = await req.json();
 
-    // 1. Cari Data Siswa (Prioritas 1: Siswa Aktif / Sudah Lunas Full)
+    // 1. Cari Data Siswa
     const siswa = await prisma.tb_siswa.findUnique({
       where: { NISN: nisn },
       include: {
@@ -16,10 +16,10 @@ export async function POST(req: Request) {
 
     let dataSiswa = null;
     let riwayatBayarDaftarUlang: any[] = [];
-    let riwayatBayarPendaftaran: any[] = []; // TAMBAHAN: Untuk cek cicilan pendaftaran
+    let riwayatBayarPendaftaran: any[] = []; 
 
-    // KONDISI A: Ketemu di tb_siswa (Sudah fix jadi siswa)
     if (siswa) {
+      // === KONDISI A: SUDAH JADI SISWA TETAP ===
       dataSiswa = {
         id: siswa.id_siswa,
         nama: siswa.nama_lengkap,
@@ -41,38 +41,31 @@ export async function POST(req: Request) {
       };
       riwayatBayarDaftarUlang = siswa.tb_pembayaran_daftar_ulang;
       
-      // Ambil juga history pendaftaran dari tabel pendaftaran (via NISN) untuk kalkulasi total
-      const dataPendaftaranLama = await prisma.tb_pendaftaran.findFirst({
+      // FIX KUNCI: Cari history pendaftaran lama berdasarkan NISN asli
+      // Pastikan field 'nisn' di tb_pendaftaran sesuai dengan NISN di tb_siswa
+      const pendaftaranLama = await prisma.tb_pendaftaran.findFirst({
           where: { nisn: nisn },
           include: { tb_pembayaran_pendaftaran: true }
       });
-      if(dataPendaftaranLama) {
-          riwayatBayarPendaftaran = dataPendaftaranLama.tb_pembayaran_pendaftaran;
+      
+      if (pendaftaranLama) {
+          riwayatBayarPendaftaran = pendaftaranLama.tb_pembayaran_pendaftaran;
       }
 
-    } 
-    // KONDISI B: Masih Calon (Cari di tb_pendaftaran)
-    else {
+    } else {
+      // === KONDISI B: MASIH CALON SISWA / PENDAFTAR ===
       const pendaftar = await prisma.tb_pendaftaran.findFirst({
         where: { nisn: nisn },
         include: {
-            tb_pembayaran_pendaftaran: true, // INCLUDE PENTING
+            tb_pembayaran_pendaftaran: true,
             tb_daftar_ulang: {
-                include: {
-                    tb_pembayaran_daftar_ulang: true 
-                }
+                include: { tb_pembayaran_daftar_ulang: true }
             }
         }
       });
 
       if (!pendaftar) {
         return NextResponse.json({ error: "NISN tidak ditemukan." }, { status: 404 });
-      }
-
-      // Validasi akses (minimal status diterima atau sudah masuk daftar ulang)
-      const sudahMasukDaftarUlang = pendaftar.tb_daftar_ulang.length > 0;
-      if (pendaftar.status_seleksi !== 'diterima' && !sudahMasukDaftarUlang) {
-        return NextResponse.json({ error: "Status siswa belum tahap Daftar Ulang." }, { status: 400 });
       }
 
       dataSiswa = {
@@ -95,41 +88,33 @@ export async function POST(req: Request) {
         status_siswa: pendaftar.tipe_siswa || 'reguler'
       };
       
-      // Ambil Riwayat Pendaftaran
       riwayatBayarPendaftaran = pendaftar.tb_pembayaran_pendaftaran;
-
-      // Ambil Riwayat Daftar Ulang
-      if (sudahMasukDaftarUlang) {
+      if (pendaftar.tb_daftar_ulang.length > 0) {
           riwayatBayarDaftarUlang = pendaftar.tb_daftar_ulang[0].tb_pembayaran_daftar_ulang;
       }
     }
 
-    // 2. Ambil Semua Jenis Tagihan yang Aktif
-    let jenisTagihan = await prisma.tb_jenis_pembayaran.findMany({
-        where: { status: 'aktif' } 
-    });
-
-    // Filter tagihan berdasarkan gender
+    // 2. Ambil Jenis Tagihan Aktif & Filter Gender
+    let jenisTagihan = await prisma.tb_jenis_pembayaran.findMany({ where: { status: 'aktif' } });
     jenisTagihan = filterTagihanByGender(jenisTagihan, dataSiswa.jenis_kelamin);
 
-    // 3. Hitung Status Per Tagihan
+    // 3. Hitung Kalkulasi Terbayar (Sertakan status 'belum' agar cicilan baru tidak hilang)
     const listTagihan = jenisTagihan.map((jt) => {
         let terbayar = 0;
         const namaTagihan = jt.nama_pembayaran.toLowerCase().trim();
 
-        // --- LOGIC PERBAIKAN: PENDAFTARAN ---
-        // Cek apakah ini tagihan pendaftaran?
         if (namaTagihan.includes("pendaftaran")) {
-             // Hitung total dari tabel tb_pembayaran_pendaftaran
+             // Hitung dari tb_pembayaran_pendaftaran
              terbayar = riwayatBayarPendaftaran
-                .filter((p) => p.status === 'lunas' || p.status === 'cicil')
+                .filter((p) => ['lunas', 'cicil', 'belum'].includes(p.status))
                 .reduce((acc, curr) => acc + Number(curr.nominal), 0);
-        } 
-        else {
-             // Tagihan Daftar Ulang (Infaq, Seragam, dll)
-             // Cek riwayat dari tabel tb_pembayaran_daftar_ulang
+        } else {
+             // Hitung dari tb_pembayaran_daftar_ulang
              terbayar = riwayatBayarDaftarUlang
-                .filter((p) => p.id_jenis_pembayaran === jt.id_jenis_pembayaran && (p.status === 'lunas' || p.status === 'cicil'))
+                .filter((p) => 
+                    p.id_jenis_pembayaran === jt.id_jenis_pembayaran && 
+                    ['lunas', 'cicil', 'belum'].includes(p.status)
+                )
                 .reduce((acc, curr) => acc + Number(curr.nominal), 0);
         }
 
@@ -142,11 +127,11 @@ export async function POST(req: Request) {
             total_tagihan: nominalTagihan,
             terbayar: terbayar,
             sisa: sisa,
-            status: sisa <= 0 ? 'Lunas' : terbayar > 0 ? 'Belum Lunas' : 'Belum Lunas'
+            status: sisa <= 0 ? 'Lunas' : 'Belum Lunas'
         };
     });
 
-    // 4. Hitung Ringkasan Global
+    // 4. Ringkasan Global
     const totalSemua = listTagihan.reduce((acc, curr) => acc + curr.total_tagihan, 0);
     const terbayarSemua = listTagihan.reduce((acc, curr) => acc + curr.terbayar, 0);
 

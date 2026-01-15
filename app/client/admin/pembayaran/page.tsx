@@ -26,10 +26,14 @@ export default function PembayaranPage() {
     }
   };
 
-  const filteredData = data.filter(item => 
+  // Di dalam komponen PembayaranPage
+const filteredData = data
+  .filter(item => 
     item.nama_siswa.toLowerCase().includes(searchTerm.toLowerCase()) ||
     item.nisn.includes(searchTerm)
-  );
+  )
+  // Tambahkan sort di sini agar data yang baru masuk (Need Approval) langsung naik ke atas
+  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   if (loading) return <div className="ml-64 p-10 flex justify-center"><Loader2 className="animate-spin text-gray-400"/></div>;
 
@@ -69,7 +73,7 @@ export default function PembayaranPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50 text-[12px] text-gray-600">
-            {filteredData.map((item) => (
+            {filteredData.map((item, index) => (
               <tr key={item.group_id} className="hover:bg-gray-50 transition-colors duration-200">
                 {/* NISN */}
                 <td className="py-4 px-6 font-medium text-gray-500 font-mono">
@@ -95,7 +99,7 @@ export default function PembayaranPage() {
 
                 {/* Total Nominal */}
                 <td className="py-4 px-6 font-normal text-left">
-                  IDR {item.total_nominal.toLocaleString('id-ID')}
+                  IDR {(item.total_nominal || 0).toLocaleString('id-ID')}
                 </td>
 
                 {/* Status */}

@@ -50,7 +50,9 @@ export default function ResultTagihanPage() {
 
   if (!data) return null;
 
-  const { siswa, tagihan, ringkasan } = data;
+const siswa = data?.siswa || {};
+const tagihan = data?.tagihan || [];
+const ringkasan = data?.ringkasan || { total: 0, terbayar: 0, sisa: 0 };
 
   const toggleSelect = (id: number, sisa: number) => {
     if (sisa <= 0) return; 
@@ -61,9 +63,9 @@ export default function ResultTagihanPage() {
     }
   };
 
-  const totalSelected = tagihan
+ const totalSelected = (tagihan || [])
     .filter((t: any) => selectedIds.includes(t.id))
-    .reduce((acc: number, curr: any) => acc + curr.sisa, 0);
+    .reduce((acc: number, curr: any) => acc + (curr.sisa || 0), 0);
 
   const handleBayar = () => {
     const itemsToPay = tagihan
@@ -307,11 +309,12 @@ function InfoItem({ label, value, highlight = false }: { label: string, value: s
     );
 }
 
-function SummaryCard({ title, amount, color }: { title: string, amount: number, color: string }) {
+function SummaryCard({ title, amount, color }: { title: string, amount: any, color: string }) {
     return (
         <div className="bg-gray-50 p-5 rounded-xl border border-gray-100">
             <p className="text-xs font-bold text-gray-800 uppercase mb-3 flex items-baseline gap-1">
-                IDR <span className={`text-2xl ${color}`}>{amount.toLocaleString('id-ID')}</span>
+                {/* TAMBAHKAN (amount || 0) DISINI */}
+                IDR <span className={`text-2xl ${color}`}>{(amount || 0).toLocaleString('id-ID')}</span>
             </p>
             <p className="text-[11px] font-medium text-gray-400">{title}</p>
         </div>

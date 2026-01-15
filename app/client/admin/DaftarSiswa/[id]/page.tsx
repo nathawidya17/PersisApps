@@ -47,7 +47,7 @@ export default function DetailSiswaPage() {
     return s?.tb_orang_tua && s.tb_orang_tua.length > 0 ? s.tb_orang_tua[0] : null;
   }, [s]);
 
-  // --- Helper: Hitung Pembayaran ---
+  // --- Helper: Hitung Pembayaran (FIXED LOGIC) ---
   const getTerbayarPerJenis = (jenisTagihan: any) => {
     if (!s) return 0;
     
@@ -59,7 +59,8 @@ export default function DetailSiswaPage() {
     if (namaTagihan.includes("pendaftaran")) {
        const bayarPendaftaran = s.tb_pembayaran_pendaftaran || [];
        const totalPendaftaran = bayarPendaftaran
-         .filter((p: any) => p.status === 'lunas') 
+         // KUNCI PERBAIKAN: Sertakan cicil dan belum agar total jadi 100rb
+         .filter((p: any) => ['lunas', 'cicil', 'belum'].includes(p.status)) 
          .reduce((acc: number, curr: any) => acc + (Number(curr.nominal) || 0), 0);
        
        total += totalPendaftaran;
@@ -71,7 +72,8 @@ export default function DetailSiswaPage() {
       .filter((p: any) => {
          return Number(p.id_jenis_pembayaran) === Number(idJenis);
       })
-      .filter((p: any) => p.status === 'lunas') 
+      // KUNCI PERBAIKAN: Sertakan cicil dan belum agar total sinkron
+      .filter((p: any) => ['lunas', 'cicil', 'belum'].includes(p.status)) 
       .reduce((acc: number, curr: any) => acc + (Number(curr.nominal) || 0), 0);
     
     total += totalDaftarUlang;
@@ -381,7 +383,7 @@ export default function DetailSiswaPage() {
             <div className="min-h-[300px]">
               <table className="w-full text-left">
                 <thead className="bg-gray-50/50">
-                  <tr className="text-[10px] text-gray-400 font-bold border-b border-gray-50 tracking-widest">
+                  <tr className="text-[10px] text-gray-400 font-bold border-b border-gray-50 tracking-widest uppercase">
                     <th className="px-8 py-5">Nama Tagihan</th>
                     <th className="px-8 py-5">Total</th>
                     <th className="px-8 py-5 text-center">Terbayar</th>
@@ -486,7 +488,7 @@ export default function DetailSiswaPage() {
            {s.tb_prestasi && s.tb_prestasi.length > 0 ? (
              <table className="w-full text-left">
                 <thead className="bg-gray-50/50">
-                  <tr className="text-[10px] text-gray-400 font-bold border-b border-gray-50 tracking-widest">
+                  <tr className="text-[10px] text-gray-400 font-bold border-b border-gray-50 tracking-widest uppercase">
                     <th className="px-8 py-5">Nama Prestasi</th>
                     <th className="px-8 py-5">Jenis</th>
                     <th className="px-8 py-5">Tingkat</th>

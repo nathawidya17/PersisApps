@@ -1,15 +1,21 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { isValidTagihanForGender, filterTagihanByGender } from "@/lib/validationByGender";
+import { filterTagihanByGender } from "@/lib/validationByGender";
 
-// GET (TETAP SAMA)
+export const dynamic = "force-dynamic";
+
+// =================================================================================
+// 1. GET: DATA TABEL (SORTING DATA TERBARU DI PALING ATAS)
+// =================================================================================
 export async function GET() {
   try {
+    // Ambil data pendaftaran (urutan desc dari DB)
     const pendaftaran = await prisma.tb_pembayaran_pendaftaran.findMany({
       include: { tb_pendaftaran: true },
-      orderBy: { created_at: 'desc' }
+      orderBy: { created_at: 'desc' } 
     });
 
+    // Ambil data daftar ulang (urutan desc dari DB)
     const daftarUlang = await prisma.tb_pembayaran_daftar_ulang.findMany({
       include: { 
         tb_jenis_pembayaran: true,
@@ -32,13 +38,15 @@ export async function GET() {
         NISN: p.tb_pendaftaran?.nisn || "-",
         nama_siswa: p.tb_pendaftaran?.nama_lengkap || "Tanpa Nama",
         tagihan: "Biaya Pendaftaran",
-        nominal_tagihan: 200000, // Display only, gak ngaruh ke logic lunas
+        nominal_tagihan: 200000, 
         nominal: p.nominal, 
-        status: p.status === 'ditolak' ? 'Rejected' : (p.status === 'lunas' ? 'Approved' : 'Need Approval'),
+        metode: p.metode_pembayaran || "cash",
+        status: p.status === 'ditolak' ? 'Rejected' : (['lunas', 'cicil'].includes(p.status) ? 'Approved' : 'Need Approval'),
         status_db: p.status,
         bukti_pembayaran: p.bukti_pembayaran, 
         tanggal_pembayaran: p.created_at ? new Date(p.created_at).toLocaleString('id-ID', dateOptions) : "-",
-        raw_date: p.created_at ? new Date(p.created_at) : new Date(0)
+        // Simpan dalam format angka milidetik untuk sorting yang akurat
+        raw_date: p.created_at ? new Date(p.created_at).getTime() : 0
       })),
       ...daftarUlang.map((d: any) => ({
         id: d.id_pembayaran_daftar_ulang,
@@ -48,22 +56,29 @@ export async function GET() {
         tagihan: d.tb_jenis_pembayaran?.nama_pembayaran || "Daftar Ulang",
         nominal_tagihan: d.tb_jenis_pembayaran?.nominal || 0,
         nominal: d.nominal, 
-        status: d.status === 'ditolak' ? 'Rejected' : (d.status === 'lunas' ? 'Approved' : 'Need Approval'),
+        metode: d.metode_pembayaran || "cash",
+        status: d.status === 'ditolak' ? 'Rejected' : (['lunas', 'cicil'].includes(d.status) ? 'Approved' : 'Need Approval'),
         status_db: d.status,
         bukti_pembayaran: d.bukti_pembayaran,
         tanggal_pembayaran: d.created_at ? new Date(d.created_at).toLocaleString('id-ID', dateOptions) : "-",
-        raw_date: d.created_at ? new Date(d.created_at) : new Date(0)
+        // Simpan dalam format angka milidetik untuk sorting yang akurat
+        raw_date: d.created_at ? new Date(d.created_at).getTime() : 0
       }))
     ];
 
-    combinedData.sort((a, b) => b.raw_date.getTime() - a.raw_date.getTime());
+    // --- LOGIC UTAMA: Urutkan hasil gabungan (b - a) agar yang terbaru di index 0 ---
+    combinedData.sort((a, b) => b.raw_date - a.raw_date);
+
+    // Kirim JSON bersih tanpa field raw_date
     return NextResponse.json(combinedData.map(({ raw_date, ...item }) => item));
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
-// PATCH: LOGIC PENENTU STATUS (FIXED: HAPUS 200K HARDCODE)
+// =================================================================================
+// 2. PATCH: UPDATE STATUS (LOGIC CICILAN & GLOBAL STATUS)
+// =================================================================================
 export async function PATCH(request: Request) {
   try {
     const { id, type, status, id_user_admin } = await request.json();
@@ -74,93 +89,86 @@ export async function PATCH(request: Request) {
       if (admin) adminRealName = admin.nama;
     }
 
-    const targetStatus = status === "Approved" ? "lunas" : (status === "Rejected" ? "ditolak" : "belum");
     let nisnSiswa = "";
-    let jenis_kelamin = "";
-    let tagihan_name = "";
+    let finalStatusDB = "belum";
 
-    // 1. Update Status Transaksi
-    if (type === "Pendaftaran") {
-      const updated = await prisma.tb_pembayaran_pendaftaran.update({
-        where: { id_bayar_pendaftaran: Number(id) },
-        data: { status: targetStatus, approved_by: adminRealName },
-        include: { tb_pendaftaran: true }
-      });
-      nisnSiswa = updated.tb_pendaftaran?.nisn;
-      jenis_kelamin = updated.tb_pendaftaran?.jenis_kelamin;
-      tagihan_name = "Biaya Pendaftaran";
-    } else {
-      const updated = await prisma.tb_pembayaran_daftar_ulang.update({
-        where: { id_pembayaran_daftar_ulang: Number(id) },
-        data: { status: targetStatus, approved_by: adminRealName },
-        include: { 
-          tb_siswa: true,
-          tb_jenis_pembayaran: true,
-          tb_daftar_ulang: { include: { tb_pendaftaran: true } }
-        }
-      });
-      nisnSiswa = updated.tb_siswa?.NISN || updated.tb_daftar_ulang?.tb_pendaftaran?.nisn;
-      jenis_kelamin = updated.tb_siswa?.jenis_kelamin || updated.tb_daftar_ulang?.tb_pendaftaran?.jenis_kelamin;
-      tagihan_name = updated.tb_jenis_pembayaran?.nama_pembayaran || "Daftar Ulang";
+    if (status === "Approved") {
+      if (type === "Pendaftaran") {
+        const trx = await prisma.tb_pembayaran_pendaftaran.findUnique({
+          where: { id_bayar_pendaftaran: Number(id) },
+          include: { tb_pendaftaran: true }
+        });
 
-      // Validasi bahwa tagihan sesuai dengan jenis kelamin siswa
-      if (jenis_kelamin && !isValidTagihanForGender(tagihan_name, jenis_kelamin)) {
-        return NextResponse.json({ 
-          error: `Tagihan "${tagihan_name}" tidak sesuai dengan jenis kelamin siswa (${jenis_kelamin})` 
-        }, { status: 400 });
+        const masterPend = await prisma.tb_jenis_pembayaran.findFirst({
+          where: { nama_pembayaran: { contains: 'Pendaftaran' } }
+        });
+        const hargaTagihan = masterPend ? Number(masterPend.nominal) : 199000;
+
+        const history = await prisma.tb_pembayaran_pendaftaran.aggregate({
+          where: { 
+            id_pendaftaran: trx?.id_pendaftaran,
+            status: { in: ['lunas', 'cicil'] },
+            id_bayar_pendaftaran: { not: Number(id) } 
+          },
+          _sum: { nominal: true }
+        });
+
+        const totalBayar = (history._sum.nominal || 0) + Number(trx?.nominal || 0);
+        finalStatusDB = totalBayar >= hargaTagihan ? "lunas" : "cicil";
+        nisnSiswa = trx?.tb_pendaftaran?.nisn || "";
+
+        await prisma.tb_pembayaran_pendaftaran.update({
+          where: { id_bayar_pendaftaran: Number(id) },
+          data: { status: finalStatusDB as any, approved_by: adminRealName }
+        });
+
+      } else {
+        const trx = await prisma.tb_pembayaran_daftar_ulang.findUnique({
+          where: { id_pembayaran_daftar_ulang: Number(id) },
+          include: { tb_jenis_pembayaran: true, tb_siswa: true, tb_daftar_ulang: { include: { tb_pendaftaran: true } } }
+        });
+
+        const hargaTagihan = Number(trx?.tb_jenis_pembayaran?.nominal || 0);
+        const history = await prisma.tb_pembayaran_daftar_ulang.aggregate({
+          where: {
+            id_daftar_ulang: trx?.id_daftar_ulang,
+            id_jenis_pembayaran: trx?.id_jenis_pembayaran,
+            status: { in: ['lunas', 'cicil'] },
+            id_pembayaran_daftar_ulang: { not: Number(id) }
+          },
+          _sum: { nominal: true }
+        });
+
+        const totalBayar = (history._sum.nominal || 0) + Number(trx?.nominal || 0);
+        finalStatusDB = totalBayar >= hargaTagihan ? "lunas" : "cicil";
+        nisnSiswa = trx?.tb_siswa?.NISN || trx?.tb_daftar_ulang?.tb_pendaftaran?.nisn || "";
+
+        await prisma.tb_pembayaran_daftar_ulang.update({
+          where: { id_pembayaran_daftar_ulang: Number(id) },
+          data: { status: finalStatusDB as any, approved_by: adminRealName }
+        });
+      }
+    } else if (status === "Rejected") {
+      if (type === "Pendaftaran") {
+        await prisma.tb_pembayaran_pendaftaran.update({
+          where: { id_bayar_pendaftaran: Number(id) },
+          data: { status: "ditolak", approved_by: adminRealName }
+        });
+      } else {
+        await prisma.tb_pembayaran_daftar_ulang.update({
+          where: { id_pembayaran_daftar_ulang: Number(id) },
+          data: { status: "ditolak", approved_by: adminRealName }
+        });
       }
     }
 
-    // 2. LOGIKA UPDATE STATUS (FIXED)
-    if (nisnSiswa) {
-        console.log(`\n--- CEK STATUS (REVISI) UNTUK NISN: ${nisnSiswa} ---`);
-
-        // A. Hitung Total Tagihan Wajib (hanya yang sesuai jenis kelamin siswa)
-        const siswaData = await prisma.tb_siswa.findUnique({ where: { NISN: nisnSiswa } });
-        const jenisTagihan = await prisma.tb_jenis_pembayaran.findMany({ where: { status: 'aktif' } });
-        const tagihanForGender = filterTagihanByGender(jenisTagihan, siswaData?.jenis_kelamin);
-        const totalTagihanWajib = tagihanForGender.reduce((acc, curr) => acc + curr.nominal, 0);
-        
-        console.log(`1. Total Tagihan DB: Rp ${totalTagihanWajib.toLocaleString()}`);
-
-        // B. Hitung Uang Masuk Pendaftaran
-        const pendaftaran = await prisma.tb_pembayaran_pendaftaran.findFirst({
-            where: { tb_pendaftaran: { nisn: nisnSiswa }, status: 'lunas' }
-        });
-        const bayarPend = pendaftaran ? pendaftaran.nominal : 0;
-
-        // C. Hitung Uang Masuk Daftar Ulang
-        const daftarUlang = await prisma.tb_pembayaran_daftar_ulang.aggregate({
-            where: { tb_siswa: { NISN: nisnSiswa }, status: 'lunas' },
-            _sum: { nominal: true }
-        });
-        const bayarDU = daftarUlang._sum.nominal || 0;
-
-        const totalBayar = bayarPend + bayarDU;
-        console.log(`2. Total Bayar (Pend+DU): Rp ${totalBayar.toLocaleString()}`);
-
-        // D. Tentukan Status
-        // Kita pakai toleransi >= karena mungkin ada kelebihan bayar sedikit
-        const statusAkhir = totalBayar >= totalTagihanWajib ? 'lunas' : 'belum_lunas';
-        
-        console.log(`3. Hasil: ${totalBayar} >= ${totalTagihanWajib} ? ${statusAkhir.toUpperCase()}`);
-
-        // E. Update Database
-        await prisma.tb_siswa.update({
-            where: { NISN: nisnSiswa },
-            data: { status_pembayaran: statusAkhir }
-        });
-    }
-
-    const msg = status === "Approved" ? `Disetujui oleh ${adminRealName}` : `Ditolak`;
-    return NextResponse.json({ message: msg });
+    return NextResponse.json({ message: status });
   } catch (error: any) {
-    console.error("ERROR PATCH:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
-// DELETE (Tetap)
+// 3. DELETE: HAPUS DATA
 export async function DELETE(request: Request) {
   try {
     const { id, type } = await request.json();
