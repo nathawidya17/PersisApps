@@ -61,15 +61,17 @@ export default function CekTagihanPage() {
               <label className="text-sm font-bold text-gray-700 block uppercase pl-1">
                 NISN
               </label>
-              <div className="relative">
+              <div className="relative maxlength-[10]">
                 <input
                   value={nisn}
                   onChange={(e) => {
                     setNisn(e.target.value.replace(/[^0-9]/g, '')); // Hanya angka
                     setError(""); // Hilangkan error saat mengetik
+                    
                   }}
                   placeholder="Masukkan NISN anda"
-                  className={`w-full px-4 py-3 rounded-lg border outline-none transition-all text-sm font-medium
+                  maxLength={10}
+                  className={`w-full px-4 py-3 rounded-lg border outline-none transition-all text-sm font-medium 
                     ${error 
                         ? "border-red-300 focus:border-red-500 focus:ring-4 focus:ring-red-50 bg-red-50/10" 
                         : "border-gray-200 focus:border-[#428E5F] focus:ring-4 focus:ring-green-50"

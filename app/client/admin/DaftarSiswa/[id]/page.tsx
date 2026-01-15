@@ -286,6 +286,8 @@ export default function DetailSiswaPage() {
             <InfoItem label="No Hp" value={s.no_hp} />
             <InfoItem label="Ukuran Baju" value={s.ukuran_baju} />
             <InfoItem label="Alamat Lengkap" value={s.alamat || s.alamat_rumah} />
+            <InfoItem label="RT" value={s.rt || '-'} />
+            <InfoItem label="RW" value={s.rw || '-'} />
           </div>
         </div>
         <div className="bg-white p-8 rounded-[12px] shadow-sm border border-gray-100">
@@ -293,7 +295,7 @@ export default function DetailSiswaPage() {
           <p className="text-[13px] font-semibold text-gray-900 mb-10">{s.NISN}</p>
           <div className="grid grid-cols-2 gap-y-8">
             <InfoItem label="Status Siswa" value={<span className="text-[#068A50] font-bold capitalize">{s.tipe_siswa?.toLowerCase()}</span>} />
-            <InfoItem label="Asal Sekolah" value={s.asal_sekolah} />
+            <span className="uppercase"><InfoItem label="Asal Sekolah" value={s.asal_sekolah} /></span>
             <InfoItem label="Tahun Lulus" value={s.tahun_lulus} />
             <InfoItem label="Alamat Sekolah" value={<span className="truncate block max-w-[120px]">{s.alamat_sekolah}</span>} />
           </div>
@@ -304,7 +306,7 @@ export default function DetailSiswaPage() {
       <div className="bg-white p-8 rounded-[12px] shadow-sm border border-gray-100 mb-5">
         <h3 className="text-[15px] font-bold text-gray-900 mb-8 tracking-tight uppercase tracking-widest">Data Orang Tua</h3>
         {ortu ? (
-            <div className="grid grid-cols-5 gap-y-10 gap-x-4">
+            <div className="grid grid-cols-5 gap-y-10 gap-x-4 capitalize">
             <InfoItem label="Nama Ayah" value={ortu.nama_ayah} />
             <InfoItem 
                 label="TTL Ayah" 

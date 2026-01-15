@@ -116,7 +116,9 @@ const ringkasan = data?.ringkasan || { total: 0, terbayar: 0, sisa: 0 };
                     <p className="text-sm text-gray-400">{siswa.email || "user@gmail.com"}</p>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-y-8 gap-x-6 ">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-y-8 gap-x-6 capitalize">
+                    <InfoItem label="NIK" value={siswa.nik || '-'} />
+                    <InfoItem label="No KK" value={siswa.no_kk || '-'} />
                     <InfoItem label="Tempat Tanggal Lahir" value={`${siswa.tempat_lahir || '-'}, ${formatDate(siswa.tanggal_lahir)}`} />
                     <InfoItem label="Jenis Kelamin" value={displayGender(siswa.jenis_kelamin) || '-'} />
                     <InfoItem label="Anak ke" value={siswa.anak_ke || '-'} />
@@ -125,11 +127,13 @@ const ringkasan = data?.ringkasan || { total: 0, terbayar: 0, sisa: 0 };
                     <InfoItem label="No Hp" value={siswa.no_hp || '-'} />
                     <InfoItem label="Ukuran Baju Olahraga" value={siswa.ukuran_baju || '-'} />
                     <InfoItem label="Alamat Lengkap" value={siswa.alamat_rumah || '-'} />
+                    <InfoItem label="RT" value={siswa.rt || '-'} />
+                    <InfoItem label="RW" value={siswa.rw || '-'} />
                 </div>
             </div>
 
             {/* CARD 2: NISN */}
-            <div className="lg:col-span-4 bg-white rounded-2xl p-8 shadow-sm border border-gray-100 h-full flex flex-col justify-center">
+            <div className="lg:col-span-4 bg-white rounded-2xl p-8 shadow-sm border border-gray-100 h-full flex flex-col justify-center capitalize">
                 <div className="mb-6">
                     <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">NISN</p>
                     <p className="text-3xl font-bold text-gray-800 tracking-tight">{siswa.nisn}</p>
@@ -140,7 +144,7 @@ const ringkasan = data?.ringkasan || { total: 0, terbayar: 0, sisa: 0 };
                        <InfoItem label="Tahun Lulus" value={siswa.tahun_lulus || '-'} />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
-                       <InfoItem label="Asal Sekolah" value={siswa.asal_sekolah || '-'} />
+                       <span className="uppercase"><InfoItem label="Asal Sekolah" value={siswa.asal_sekolah || '-'} /></span>
                        <InfoItem label="Alamat Sekolah" value={siswa.alamat_sekolah || '-'} />
                     </div>
                 </div>

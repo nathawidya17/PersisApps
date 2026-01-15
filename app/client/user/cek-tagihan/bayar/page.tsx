@@ -57,6 +57,16 @@ export default function BayarPage() {
     }
   };
 
+  const handleNominalChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/[^0-9]/g, '');
+    const maxAmount = sessionData?.total || 0;
+    const inputAmount = parseInt(value) || 0;
+    // Auto-cap ke nilai maksimal jika melebihi
+    const cappedValue = inputAmount > maxAmount ? maxAmount : inputAmount;
+    setNominalBayar(cappedValue.toString());
+    setErrorMessage(""); // Reset error saat user input
+  };
+
   const isFormValid = () => {
     if (!nominalBayar || parseInt(nominalBayar) <= 0) return false;
     if (metode === 'Transfer') {
@@ -180,10 +190,11 @@ const handleSubmit = async () => {
                       <div className="space-y-2 text-left">
                         <label className="text-[13px] font-bold text-gray-700">Jumlah yang akan dibayar</label>
                         <input 
-                            type="number" 
-                            value={nominalBayar} 
-                            onChange={(e) => setNominalBayar(e.target.value)} 
-                            placeholder={`Contoh: ${sessionData.total}`} 
+                            type="text"
+                            inputMode="numeric"
+                            value={nominalBayar ? formatRupiah(parseInt(nominalBayar)) : ''} 
+                            onChange={handleNominalChange} 
+                            placeholder={`Contoh: ${formatRupiah(sessionData?.total || 0)}`} 
                             className="w-full px-4 py-3 rounded-lg border border-gray-200 outline-none text-sm transition-focus focus:border-[#428E5F]" 
                         />
                       </div>

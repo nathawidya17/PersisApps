@@ -21,11 +21,14 @@ import {
 const PAYMENT_CONFIG = {
   bank: process.env.NEXT_PUBLIC_BANK_NAME || "Mandiri",
   accountNumber: process.env.NEXT_PUBLIC_ACCOUNT_NUMBER || "1310044442988",
-  accountHolder: process.env.NEXT_PUBLIC_ACCOUNT_HOLDER || "Een Purucut",
-  amountPendaftaran: process.env.NEXT_PUBLIC_REGISTRATION_FEE || "200.000"
+  accountHolder: process.env.NEXT_PUBLIC_ACCOUNT_HOLDER || "Laila latifah",
+  amountPendaftaran: process.env.NEXT_PUBLIC_REGISTRATION_FEE || "199.000"
 };
 
 export default function RegistrationForm() {
+  // FORMAT RUPIAH HELPER
+  const formatRupiah = (num: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
+  
   const [step, setStep] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState("Transfer");
   const [showCopyToast, setShowCopyToast] = useState(false);
@@ -50,7 +53,7 @@ export default function RegistrationForm() {
     nama_ayah: "", tempat_lahir_ayah: "", tanggal_lahir_ayah: "", pendidikan_ayah: "", pekerjaan_ayah: "", penghasilan_ayah: "",
     nama_ibu: "", tempat_lahir_ibu: "", tanggal_lahir_ibu: "", pendidikan_ibu: "", pekerjaan_ibu: "", penghasilan_ibu: "",
     alamat_ortu: "", rt_ortu: "", rw_ortu: "", kodepos_ortu: "", no_hp_ortu: "",
-    no_hp_orang_tua: "", jumlah_dibayar: PAYMENT_CONFIG.amountPendaftaran, 
+    no_hp_orang_tua: "", jumlah_dibayar: PAYMENT_CONFIG.amountPendaftaran.replace(/\./g, ''), 
     bukti_pembayaran: null as File | null
   });
 
@@ -162,7 +165,17 @@ export default function RegistrationForm() {
 
   const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value.replace(/[^0-9]/g, '') }));
+    const numValue = value.replace(/[^0-9]/g, '');
+    
+    // Special handling untuk jumlah_dibayar - validasi agar tidak melebihi maksimal
+    if (name === 'jumlah_dibayar') {
+      const maxAmount = parseInt(PAYMENT_CONFIG.amountPendaftaran.replace(/\./g, '')) || 200000;
+      const inputAmount = parseInt(numValue) || 0;
+      const cappedValue = inputAmount > maxAmount ? maxAmount : inputAmount;
+      setFormData(prev => ({ ...prev, [name]: cappedValue.toString() }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: numValue }));
+    }
     if (name === 'nisn') setNisnError("");
   };
 
@@ -525,13 +538,18 @@ export default function RegistrationForm() {
                 
                     <div className="space-y-5">
                         <InputReadOnly label="Jumlah Tagihan Pendaftaran" value={`IDR ${PAYMENT_CONFIG.amountPendaftaran}`} />
-                      <InputGroup 
-                        label="Jumlah yang akan dibayar" 
-                        name="jumlah_dibayar" 
-                        value={formData.jumlah_dibayar} 
-                        onChange={handleNumberChange} 
-                        placeholder={`Contoh: ${PAYMENT_CONFIG.amountPendaftaran}`} 
-                      />
+                      <div className="space-y-2">
+                        <label className="text-[13px] font-bold text-gray-700">Jumlah yang akan dibayar</label>
+                        <input 
+                          type="text"
+                          inputMode="numeric"
+                          name="jumlah_dibayar"
+                          value={formData.jumlah_dibayar ? formatRupiah(parseInt(formData.jumlah_dibayar)) : ''}
+                          onChange={handleNumberChange}
+                          placeholder={`Contoh: ${PAYMENT_CONFIG.amountPendaftaran}`}
+                          className="w-full px-4 py-3 rounded-lg border border-gray-200 outline-none text-sm transition-all focus:border-[#428E5F]"
+                        />
+                      </div>
                       
                       {paymentMethod === "Cash" && (
                         <div className="p-5 bg-green-50 rounded-xl border border-green-100 flex gap-4 animate-in zoom-in duration-300">

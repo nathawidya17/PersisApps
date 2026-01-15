@@ -156,7 +156,17 @@ function FormContent() {
   
   const handleNumberChange = (e: any) => {
     const { name, value } = e.target;
-    setFormData((prev: any) => ({ ...prev, [name]: value.replace(/[^0-9]/g, '') }));
+    const numValue = value.replace(/[^0-9]/g, '');
+    
+    // Special handling untuk jumlah_dibayar - validasi agar tidak melebihi total
+    if (name === 'jumlah_dibayar') {
+      const maxAmount = totalTagihan;
+      const inputAmount = parseInt(numValue) || 0;
+      const cappedValue = inputAmount > maxAmount ? maxAmount : inputAmount;
+      setFormData((prev: any) => ({ ...prev, [name]: cappedValue.toString() }));
+    } else {
+      setFormData((prev: any) => ({ ...prev, [name]: numValue }));
+    }
   };
 
   const handleDateChange = (name: string, date: Date | undefined) => {
@@ -452,13 +462,18 @@ function FormContent() {
                 
                     <div className="space-y-5">
                       <InputReadOnly label="Total Tagihan Terpilih" value={formatRupiah(totalTagihan)} />
-                      <InputGroup 
-                        label="Jumlah yang akan dibayar" 
-                        name="jumlah_dibayar" 
-                        value={formData.jumlah_dibayar} 
-                        onChange={handleNumberChange} 
-                        placeholder={`Contoh: ${formatRupiah(totalTagihan)}`} 
-                      />
+                      <div className="space-y-2 text-left">
+                        <label className="text-[13px] font-bold text-gray-700">Jumlah yang akan dibayar</label>
+                        <input 
+                          type="text"
+                          inputMode="numeric"
+                          name="jumlah_dibayar" 
+                          value={formData.jumlah_dibayar ? formatRupiah(parseInt(formData.jumlah_dibayar) || 0) : ''} 
+                          onChange={handleNumberChange} 
+                          placeholder={`Contoh: ${formatRupiah(totalTagihan)}`}
+                          className="w-full px-4 py-3 rounded-lg border border-gray-200 outline-none text-sm transition-focus focus:border-[#428E5F]"
+                        />
+                      </div>
                       
                       {paymentMethod === "Cash" && (
                         <div className="p-5 bg-green-50 rounded-xl border border-green-100 flex gap-4 animate-in zoom-in duration-300">

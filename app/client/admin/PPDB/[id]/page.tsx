@@ -364,6 +364,8 @@ export default function DetailCalonSiswaPage() {
             <InfoItem label="No Hp" value={s?.no_hp} />
             <InfoItem label="Ukuran Baju" value={s?.ukuran_baju} />
             <InfoItem label="Alamat" value={s?.alamat_rumah} />
+            <InfoItem label="RT" value={s?.rt || '-'} />
+            <InfoItem label="RW" value={s?.rw || '-'} />
           </div>
         </div>
         <div className="bg-white p-8 rounded-[12px] shadow-sm border border-gray-100">
@@ -371,7 +373,7 @@ export default function DetailCalonSiswaPage() {
           <p className="text-[13px] font-bold text-gray-900 mb-10 text-left">{s?.nisn}</p>
           <div className="grid grid-cols-2 gap-y-8">
             <InfoItem label="Status Siswa" value={<span className="text-green-600 font-bold capitalize">{s?.tipe_siswa}</span>} />
-            <InfoItem label="Asal Sekolah" value={s?.asal_sekolah} />
+            <span className="uppercase"><InfoItem label="Asal Sekolah" value={s?.asal_sekolah} /></span>
             <InfoItem label="Tahun Lulus" value={s?.tahun_lulus} />
             <InfoItem label="Alamat Sekolah" value={<span className="capitalize truncate block max-w-full">{s?.alamat_sekolah}</span>} />
           </div>
@@ -381,7 +383,7 @@ export default function DetailCalonSiswaPage() {
       {/* Parent Data */}
       <div className="bg-white p-8 rounded-[12px] shadow-sm border border-gray-100 mb-5">
         <h3 className="text-[15px] font-bold text-gray-900 mb-8 tracking-tight uppercase tracking-widest text-left">Data Orang Tua</h3>
-        <div className="grid grid-cols-5 gap-y-10 gap-x-4">
+        <div className="grid grid-cols-5 gap-y-10 gap-x-4 capitalize">
           <InfoItem label="Nama Ayah" value={s?.nama_ayah} />
           <InfoItem label="Lahir Ayah" value={`${s?.tempat_lahir_ayah || '-'}, ${s?.tanggal_lahir_ayah?.split('T')[0] || '-'}`} />
           <InfoItem label="Pendidikan" value={s?.pendidikan_ayah} />
