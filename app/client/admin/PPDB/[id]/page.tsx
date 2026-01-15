@@ -105,7 +105,7 @@ export default function DetailCalonSiswaPage() {
       setShowDeleteConfirm(false);
       // Redirect setelah hapus berhasil
       setTimeout(() => {
-        router.push('/client/admin/PPDB'); // Sesuaikan route list siswa Anda
+        router.push('/client/admin/PPDB'); 
       }, 1500);
     } catch (err: any) {
       setNotification({
@@ -123,16 +123,21 @@ export default function DetailCalonSiswaPage() {
   const s = data?.detail;
   const isDaftarUlang = data?.status_tahap === "Daftar Ulang";
   
-  // Logic Kelayakan Validasi
+  // --- LOGIC KELAYAKAN VALIDASI (UPDATE: Support Bantuan) ---
+  const isBantuan = s?.tipe_siswa === 'bantuan';
   const isLunasPendaftaran = s?.tb_pembayaran_pendaftaran?.some((p: any) => p.status === 'lunas');
   const hasDaftarUlangPayment = s?.tb_daftar_ulang?.[0]?.tb_pembayaran_daftar_ulang?.length > 0;
-  const canValidate = isDaftarUlang ? hasDaftarUlangPayment : isLunasPendaftaran;
+  
+  // Boleh validasi jika: SUDAH BAYAR atau STATUS BANTUAN
+  const canValidate = isDaftarUlang 
+    ? (hasDaftarUlangPayment || isBantuan) 
+    : (isLunasPendaftaran || isBantuan);
 
   const formatIDR = (amount: number) => {
     return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(amount);
   };
 
-  // --- LOGIC TAGIHAN (Sama seperti sebelumnya) ---
+  // --- LOGIC TAGIHAN ---
   const masterTagihan = data?.jenis_pembayaran || []; 
   const riwayatDaftarUlang = s?.tb_daftar_ulang?.[0]?.tb_pembayaran_daftar_ulang || [];
   const riwayatPendaftaran = s?.tb_pembayaran_pendaftaran || [];
@@ -232,15 +237,18 @@ export default function DetailCalonSiswaPage() {
         </div>
       </div>
 
-      {/* MODAL KONFIRMASI VALIDASI */}
+      {/* MODAL KONFIRMASI VALIDASI (UPDATED) */}
       {showConfirm && (
         <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-in fade-in" onClick={() => setShowConfirm(false)}></div>
           <div className="relative bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 animate-in zoom-in text-center">
+            
             <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-4 ${canValidate ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
               {canValidate ? <CheckCircle size={32} /> : <AlertCircle size={32} />}
             </div>
+
             <h3 className="text-lg font-bold mb-2">{canValidate ? 'Konfirmasi Validasi' : 'Validasi Gagal'}</h3>
+            
             {!canValidate ? (
                <div className="bg-red-50 border border-red-100 p-3 rounded-xl mb-6">
                  <p className="text-[11px] text-red-600 font-semibold leading-relaxed">
@@ -248,10 +256,20 @@ export default function DetailCalonSiswaPage() {
                  </p>
                </div>
             ) : (
-              <p className="text-sm text-gray-500 mb-6 leading-relaxed">
-                Apakah Anda yakin ingin memvalidasi <b>{s?.nama_lengkap}</b>?
-              </p>
+              <div className="mb-6">
+                {isBantuan && (
+                   <div className="bg-yellow-50 border border-yellow-100 p-2 rounded-lg mb-3">
+                      <p className="text-[10px] text-yellow-700 font-bold flex items-center justify-center gap-1">
+                        <Gift size={12} /> Status Siswa Bantuan (Bypass Pembayaran)
+                      </p>
+                   </div>
+                )}
+                <p className="text-sm text-gray-500 leading-relaxed">
+                  Apakah Anda yakin ingin memvalidasi <b>{s?.nama_lengkap}</b>?
+                </p>
+              </div>
             )}
+
             <div className="flex gap-3">
               <button onClick={() => setShowConfirm(false)} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-all cursor-pointer">Batal</button>
               {canValidate && (
@@ -327,8 +345,6 @@ export default function DetailCalonSiswaPage() {
             <InfoItem label="Jenis Kelamin" value={displayGender(s?.jenis_kelamin)} />
             <InfoItem label="Anak ke" value={s?.anak_ke} />
             <InfoItem label="Jumlah Saudara" value={s?.jumlah_saudara} />
-            
-            {/* === LOGIC MENAMPILKAN HAFALAN KHUSUS TAHFIDZ === */}
             <InfoItem 
               label="Jalur Pendaftaran" 
               value={
@@ -342,8 +358,6 @@ export default function DetailCalonSiswaPage() {
                 </div>
               } 
             />
-            {/* ================================================ */}
-
             <InfoItem label="No Hp" value={s?.no_hp} />
             <InfoItem label="Ukuran Baju" value={s?.ukuran_baju} />
             <InfoItem label="Alamat" value={s?.alamat_rumah} />
@@ -567,7 +581,7 @@ function EmptyState({ message, subMessage, type = 'table' }: { message: string, 
     }
 
     return (
-        <table className="w-full h-full">
+        <table className="w-full h-ful l">
             <tbody>
                 <tr className="w-full">
                     <td colSpan={7} className="py-20 text-center w-full">

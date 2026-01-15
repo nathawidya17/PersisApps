@@ -71,7 +71,7 @@ export default function ReceiptModal({ isOpen, onClose, data }: ReceiptModalProp
             
             {/* Header */}
             <div className="text-center mb-6">
-              <h2 className="text-2xl font-black tracking-tighter uppercase mb-1">PERSIS 212</h2>
+              <h2 className="text-2xl font-black tracking-tighter uppercase mb-1">MA PERSIS KUDANG</h2>
               <p className="text-[10px] uppercase tracking-widest text-gray-500">Kudang - Garut</p>
               <p className="text-[10px] text-gray-400 mt-1">{formatDate(data.tanggal)}</p>
             </div>

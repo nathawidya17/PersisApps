@@ -22,12 +22,18 @@ export async function POST(req: Request) {
     }
 
     const isAlreadyDaftarUlang = pendaftaran.tb_daftar_ulang.length > 0;
+    
+    // --- LOGIC TAMBAHAN: CEK STATUS BANTUAN ---
+    // Jika tipe_siswa adalah 'bantuan', kita izinkan validasi tanpa cek pembayaran
+    const isBantuan = pendaftaran.tipe_siswa === 'bantuan';
 
     // SKENARIO 1: MASUK TAHAP DAFTAR ULANG
     if (!isAlreadyDaftarUlang) {
       const isLunasPendaftaran = pendaftaran.tb_pembayaran_pendaftaran.some(p => p.status === 'lunas');
       
-      if (!isLunasPendaftaran) {
+      // LOGIC BARU: Jika BUKAN bantuan DAN BELUM lunas, maka tolak.
+      // Kalau bantuan = true, kondisi ini false, jadi lanjut (bypass).
+      if (!isBantuan && !isLunasPendaftaran) {
         return NextResponse.json({ error: "Gagal: Biaya Pendaftaran belum lunas!" }, { status: 400 });
       }
 
@@ -44,7 +50,8 @@ export async function POST(req: Request) {
       const pembayaranDU = pendaftaran.tb_daftar_ulang[0].tb_pembayaran_daftar_ulang;
       const hasPayment = pembayaranDU.some(p => p.status === 'lunas' || p.status === 'cicil');
 
-      if (!hasPayment) {
+      // LOGIC BARU: Jika BUKAN bantuan DAN BELUM ada pembayaran, maka tolak.
+      if (!isBantuan && !hasPayment) {
         return NextResponse.json({ error: "Gagal: Belum ada pembayaran Daftar Ulang" }, { status: 400 });
       }
 
@@ -58,7 +65,6 @@ export async function POST(req: Request) {
       }
 
       // --- PERBAIKAN LOGIC GENDER (SOLUSI ERROR TS) ---
-      // Konversi ke String() agar TypeScript mengizinkan perbandingan dengan string biasa
       let genderFixed = String(pendaftaran.jenis_kelamin); 
       
       if (genderFixed === "Laki-laki" || genderFixed === "Laki laki") {
@@ -74,14 +80,12 @@ export async function POST(req: Request) {
             NISN: nisnSiswa,
             nama_lengkap: pendaftaran.nama_lengkap,
             email: pendaftaran.email,
+            // Pastikan tipe siswa ('bantuan'/'reguler') masuk ke data siswa baru
             tipe_siswa: pendaftaran.tipe_siswa === 'bantuan' ? 'bantuan' : 'reguler',
             jalur_pendaftaran: pendaftaran.jalur_pendaftaran as any, 
             tempat_lahir: pendaftaran.tempat_lahir,
             tanggal_lahir: pendaftaran.tanggal_lahir,
-            
-            // GUNAKAN VARIABEL YANG SUDAH DI-FIX DAN DI-CAST 'any'
             jenis_kelamin: genderFixed as any,
-            
             ukuran_baju: pendaftaran.ukuran_baju as any,
             no_hp: pendaftaran.no_hp,
             alamat: pendaftaran.alamat_rumah, 
@@ -97,6 +101,8 @@ export async function POST(req: Request) {
             status_pembayaran: "belum_lunas",
             
             jumlah_hafalan: pendaftaran.jumlah_hafalan,
+            // Hapus field sertifikat jika tidak ada di schema tb_siswa, atau biarkan jika ada
+            // sertifikat_tahfidz: pendaftaran.sertifikat_tahfidz 
           }
         });
 
@@ -137,13 +143,13 @@ export async function POST(req: Request) {
             }));
         }
 
-        // D. Update Pembayaran
+        // D. Update Pembayaran (Link ke Siswa Baru)
         await tx.tb_pembayaran_daftar_ulang.updateMany({
           where: { id_daftar_ulang: idDaftarUlang },
           data: { id_siswa: siswa.id_siswa }
         });
 
-        // E. Update Status
+        // E. Update Status Pendaftar
         await tx.tb_pendaftaran.update({
             where: { id_pendaftar: pendaftaran.id_pendaftar },
             data: { status_seleksi: 'diterima' }
