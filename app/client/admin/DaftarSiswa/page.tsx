@@ -97,6 +97,8 @@ export default function DaftarSiswaPage() {
                     "NISN": detail.NISN,
                     "Nama Lengkap": detail.nama_lengkap,
                     "Email": detail.email || "-",
+                    "NIK": detail.nik || "-",
+                    "No KK": detail.no_kk || "-",
                     "Tipe Siswa": detail.tipe_siswa,
                     "Jalur Pendaftaran": detail.jalur_pendaftaran,
                     "Jumlah Hafalan": detail.jumlah_hafalan || "-",

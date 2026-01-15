@@ -45,6 +45,7 @@ export default function RegistrationForm() {
     jumlah_hafalan: "", // <--- TAMBAHAN KHUSUS TAHFIDZ
     nama_lengkap: "", jenis_kelamin: "" as any, tempat_lahir: "", tanggal_lahir: "", anak_ke: "", jumlah_saudara: "",
     no_hp: "", email: "", alamat_rumah: "", rt: "", rw: "", kode_pos: "", ukuran_baju: "" as any,
+    nik: "", no_kk: "",
     asal_sekolah: "", tahun_lulus: "", alamat_sekolah: "", kode_pos_sekolah: "", nisn: "",
     nama_ayah: "", tempat_lahir_ayah: "", tanggal_lahir_ayah: "", pendidikan_ayah: "", pekerjaan_ayah: "", penghasilan_ayah: "",
     nama_ibu: "", tempat_lahir_ibu: "", tanggal_lahir_ibu: "", pendidikan_ibu: "", pekerjaan_ibu: "", penghasilan_ibu: "",
@@ -245,7 +246,7 @@ export default function RegistrationForm() {
   };
 
   const isStepValid = () => {
-    if (step === 1) return formData.jalur_pendaftaran && formData.nama_lengkap && formData.jenis_kelamin && formData.tempat_lahir && formData.tanggal_lahir && formData.anak_ke && formData.jumlah_saudara && formData.no_hp && formData.email && formData.alamat_rumah && formData.rt && formData.rw && formData.kode_pos && formData.ukuran_baju;
+    if (step === 1) return formData.jalur_pendaftaran && formData.nama_lengkap && formData.jenis_kelamin && formData.tempat_lahir && formData.tanggal_lahir && formData.anak_ke && formData.jumlah_saudara && formData.no_hp && formData.email && formData.alamat_rumah && formData.rt && formData.rw && formData.kode_pos && formData.ukuran_baju && formData.nik && formData.no_kk;
     if (step === 2) return formData.nisn && formData.asal_sekolah && formData.alamat_sekolah && formData.tahun_lulus && formData.kode_pos_sekolah;
     if (isPrestasi && step === 3) return prestasiList.every(item => item.nama && item.jenis_prestasi && item.tingkat && item.peringkat && item.tahun && item.penyelenggara);
     const stepOrangTua = isPrestasi ? 4 : 3;
@@ -370,6 +371,8 @@ export default function RegistrationForm() {
                     {/* Batasi Angka */}
                     <InputGroup label="Anak Ke" name="anak_ke" value={formData.anak_ke} onChange={handleNumberChange} placeholder="Contoh: 1" maxLength={2} />
                     <InputGroup label="Jumlah Saudara" name="jumlah_saudara" value={formData.jumlah_saudara} onChange={handleNumberChange} placeholder="0" maxLength={2} />
+                    <InputGroup label="NIK" name="nik" value={formData.nik} onChange={handleNumberChange} placeholder="16 digit NIK" maxLength={16} />
+                    <InputGroup label="No KK" name="no_kk" value={formData.no_kk} onChange={handleNumberChange} placeholder="16 digit No KK" maxLength={16} />
                     <InputGroup label="No HP (WA)" name="no_hp" value={formData.no_hp} onChange={handleNumberChange} placeholder="08xxxxxxxx" maxLength={15} />
                     <InputGroup label="Email" name="email" value={formData.email} onChange={handleChange} placeholder="email@gmail.com" maxLength={100} />
                     <div className="md:col-span-2"><InputGroup label="Alamat Lengkap" name="alamat_rumah" value={formData.alamat_rumah} onChange={handleChange} placeholder="Jl. Raya No. 1" maxLength={255} /></div>

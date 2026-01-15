@@ -168,6 +168,8 @@ export default function EditDetailSiswa() {
 
               <FormInput label="Anak Ke" name="anak_ke" value={formData.anak_ke} onChange={handleChange} placeholder="Contoh: 1" />
               <FormInput label="Jumlah Saudara" name="jumlah_saudara" value={formData.jumlah_saudara} onChange={handleChange} placeholder="Contoh: 2" />
+              <FormInput label="NIK" name="nik" value={formData.nik} onChange={handleChange} placeholder="16 digit NIK" />
+              <FormInput label="No KK" name="no_kk" value={formData.no_kk} onChange={handleChange} placeholder="16 digit No KK" />
               <FormInput label="No Handphone" name="no_hp" value={formData.no_hp} onChange={handleChange} placeholder="+62 ..." />
               <FormInput label="Email" name="email" value={formData.email} onChange={handleChange} placeholder="email@contoh.com" />
               <div className="col-span-2">

@@ -114,6 +114,8 @@ export async function POST(req: Request) {
           jumlah_hafalan: getVal("jumlah_hafalan") || null,
           ukuran_baju: getVal("ukuran_baju") as any,
           no_hp: getVal("no_hp"),
+          nik: getVal("nik"),
+          no_kk: getVal("no_kk"),
           alamat_rumah: getVal("alamat_rumah"),
           rt: getVal("rt"),
           rw: getVal("rw"),

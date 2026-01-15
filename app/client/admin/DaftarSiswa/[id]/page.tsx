@@ -264,6 +264,8 @@ export default function DetailSiswaPage() {
             <InfoItem label="Jenis Kelamin" value={displayGender(s.jenis_kelamin)} />
             <InfoItem label="Anak ke" value={s.anak_ke} />
             <InfoItem label="Jumlah Saudara" value={s.jumlah_saudara} />
+            <InfoItem label="NIK" value={s.nik || "-"} />
+            <InfoItem label="No KK" value={s.no_kk || "-"} />
             
             {/* === MENAMPILKAN HAFALAN KHUSUS TAHFIDZ === */}
             <InfoItem 
@@ -288,7 +290,7 @@ export default function DetailSiswaPage() {
         </div>
         <div className="bg-white p-8 rounded-[12px] shadow-sm border border-gray-100">
           <h3 className="text-2xl font-bold text-gray-900 mb-1 tracking-tight">NISN</h3>
-          <p className="text-[13px] font-semibold text-gray-300 mb-10">{s.NISN}</p>
+          <p className="text-[13px] font-semibold text-gray-900 mb-10">{s.NISN}</p>
           <div className="grid grid-cols-2 gap-y-8">
             <InfoItem label="Status Siswa" value={<span className="text-[#068A50] font-bold capitalize">{s.tipe_siswa?.toLowerCase()}</span>} />
             <InfoItem label="Asal Sekolah" value={s.asal_sekolah} />

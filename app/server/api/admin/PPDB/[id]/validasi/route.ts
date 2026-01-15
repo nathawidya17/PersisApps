@@ -6,7 +6,7 @@ export async function POST(req: Request) {
     const { id_pendaftar } = await req.json();
 
     // 1. Ambil data pendaftaran lengkap
-    const pendaftaran = await prisma.tb_pendaftaran.findUnique({
+    const pendaftaran: any = await prisma.tb_pendaftaran.findUnique({
       where: { id_pendaftar },
       include: { 
         tb_pembayaran_pendaftaran: true,
@@ -26,7 +26,7 @@ export async function POST(req: Request) {
 
     // SKENARIO 1: MASUK TAHAP DAFTAR ULANG
     if (!isAlreadyDaftarUlang) {
-      const isLunasPendaftaran = pendaftaran.tb_pembayaran_pendaftaran.some(p => p.status === 'lunas');
+      const isLunasPendaftaran = pendaftaran.tb_pembayaran_pendaftaran.some((p: any) => p.status === 'lunas');
       
       if (!isBantuan && !isLunasPendaftaran) {
         return NextResponse.json({ error: "Gagal: Biaya Pendaftaran belum lunas!" }, { status: 400 });
@@ -43,7 +43,7 @@ export async function POST(req: Request) {
     else {
       const idDaftarUlang = pendaftaran.tb_daftar_ulang[0].id_daftar_ulang;
       const pembayaranDU = pendaftaran.tb_daftar_ulang[0].tb_pembayaran_daftar_ulang;
-      const hasPayment = pembayaranDU.some(p => p.status === 'lunas' || p.status === 'cicil');
+      const hasPayment = pembayaranDU.some((p: any) => p.status === 'lunas' || p.status === 'cicil');
 
       if (!isBantuan && !hasPayment) {
         return NextResponse.json({ error: "Gagal: Belum ada pembayaran Daftar Ulang" }, { status: 400 });
@@ -82,6 +82,8 @@ export async function POST(req: Request) {
             jenis_kelamin: genderFixed as any,
             ukuran_baju: pendaftaran.ukuran_baju as any,
             no_hp: pendaftaran.no_hp,
+            nik: pendaftaran.nik,
+            no_kk: pendaftaran.no_kk,
             alamat: pendaftaran.alamat_rumah, 
             rt: pendaftaran.rt,
             rw: pendaftaran.rw,
@@ -119,7 +121,7 @@ export async function POST(req: Request) {
 
         // C. Copy Prestasi
         if (pendaftaran.tb_prestasi_pendaftar && pendaftaran.tb_prestasi_pendaftar.length > 0) {
-            await Promise.all(pendaftaran.tb_prestasi_pendaftar.map(async (p) => {
+            await Promise.all(pendaftaran.tb_prestasi_pendaftar.map(async (p: any) => {
                 return tx.tb_prestasi.create({
                     data: {
                         id_siswa: siswa.id_siswa,

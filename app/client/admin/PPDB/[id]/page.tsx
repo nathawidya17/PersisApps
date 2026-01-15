@@ -341,10 +341,13 @@ export default function DetailCalonSiswaPage() {
              </div>
           </div>
           <div className="grid grid-cols-4 gap-y-8 gap-x-4">
+              <InfoItem label="NIK" value={s?.nik || "-"} />
+            <InfoItem label="No KK" value={s?.no_kk || "-"} />
             <InfoItem label="Tempat Tanggal Lahir" value={`${s?.tempat_lahir}, ${s?.tanggal_lahir?.split('T')[0]}`} />
             <InfoItem label="Jenis Kelamin" value={displayGender(s?.jenis_kelamin)} />
             <InfoItem label="Anak ke" value={s?.anak_ke} />
             <InfoItem label="Jumlah Saudara" value={s?.jumlah_saudara} />
+          
             <InfoItem 
               label="Jalur Pendaftaran" 
               value={
@@ -365,7 +368,7 @@ export default function DetailCalonSiswaPage() {
         </div>
         <div className="bg-white p-8 rounded-[12px] shadow-sm border border-gray-100">
           <h3 className="text-2xl font-bold text-gray-900 tracking-tight text-left">NISN</h3>
-          <p className="text-[13px] font-bold text-gray-300 mb-10 text-left">{s?.nisn}</p>
+          <p className="text-[13px] font-bold text-gray-900 mb-10 text-left">{s?.nisn}</p>
           <div className="grid grid-cols-2 gap-y-8">
             <InfoItem label="Status Siswa" value={<span className="text-green-600 font-bold capitalize">{s?.tipe_siswa}</span>} />
             <InfoItem label="Asal Sekolah" value={s?.asal_sekolah} />

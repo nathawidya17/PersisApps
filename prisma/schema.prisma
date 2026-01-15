@@ -42,6 +42,8 @@ model tb_orang_tua {
 model tb_pendaftaran {
   id_pendaftar              Int                              @id @default(autoincrement())
   nisn                      String                           @db.VarChar(15)
+  nik                       String                           @db.VarChar(16)
+  no_kk                     String                           @db.VarChar(16)
   jalur_pendaftaran         tb_pendaftaran_jalur_pendaftaran
   jumlah_hafalan            String?                          @db.VarChar(255)
   tipe_siswa                tb_pendaftaran_tipe_siswa?       @default(regular)
@@ -100,6 +102,8 @@ model tb_prestasi {
 model tb_siswa {
   id_siswa                   Int                          @id @default(autoincrement())
   NISN                       String                       @unique(map: "nisn") @db.VarChar(10)
+  nik                        String                       @db.VarChar(16)
+  no_kk                      String                       @db.VarChar(16)
   nama_lengkap               String                       @db.VarChar(50)
   email                      String?                      @db.VarChar(100)
   tipe_siswa                 tb_siswa_tipe_siswa          @default(reguler)
@@ -315,22 +319,6 @@ enum tb_jenis_pembayaran_status {
   non_aktif @map("non-aktif")
 }
 
-enum tb_pembayaran_pendaftaran_status {
-  belum
-  menunggu
-  cicil
-  lunas
-  ditolak
-}
-
-enum tb_pembayaran_daftar_ulang_status {
-  belum
-  menunggu
-  cicil
-  lunas
-  ditolak
-}
-
 enum tb_pendaftaran_jenis_kelamin {
   Laki_laki @map("Laki laki")
   Perempuan
@@ -339,4 +327,18 @@ enum tb_pendaftaran_jenis_kelamin {
 enum tb_siswa_jenis_kelamin {
   Laki_laki @map("Laki laki")
   Perempuan
+}
+
+enum tb_pembayaran_pendaftaran_status {
+  belum
+  cicil
+  lunas
+  ditolak
+}
+
+enum tb_pembayaran_daftar_ulang_status {
+  belum
+  cicil
+  lunas
+  ditolak
 }
