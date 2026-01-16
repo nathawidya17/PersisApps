@@ -154,7 +154,7 @@ export default function PPDBPage() {
 
   return (
     <div className="ml-64 bg-gray-100 min-h-screen pb-10 px-5 pt-5 antialiased font-sans">
-      <h2 className="text-xl font-bold text-gray-800 mb-5">PPDB (Proses Seleksi)</h2>
+      <h2 className="text-xl font-bold text-gray-800 mb-5">PPDB</h2>
 
       <div className="bg-white p-6 rounded-[12px] shadow-sm border border-gray-100 mb-5 overflow-hidden">
         
@@ -250,17 +250,35 @@ export default function PPDBPage() {
           </table>
         </div>
         
-        {/* Pagination UI */}
-        <div className="flex items-center justify-between px-8 py-6 border-t border-gray-50 mt-2">
-            <p className="text-[12px] text-gray-400 font-medium">Page {currentPage} of {totalPages}</p>
-             <div className="flex gap-2">
-                <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => Math.max(1, p - 1))} className="p-1 text-gray-400 hover:text-green-600 disabled:opacity-30"><ChevronLeft size={18}/></button>
-                <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} className="p-1 text-gray-400 hover:text-green-600 disabled:opacity-30"><ChevronRight size={18}/></button>
+          <div className="flex items-center justify-between px-8 py-6 border-t border-gray-50">
+                 <p className="text-[12px] text-gray-400 font-medium">
+                   {filteredData.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}-{Math.min(currentPage * itemsPerPage, filteredData.length)} of {filteredData.length} items
+                 </p>
+                 <div className="flex items-center gap-6">
+                   <div className="flex items-center gap-1">
+                     <button disabled={currentPage === 1} onClick={() => setCurrentPage(1)} className="p-1 text-gray-400 hover:text-green-600 disabled:opacity-30 cursor-pointer"><ChevronsLeft size={18}/></button>
+                     <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => Math.max(1, p - 1))} className="p-1 text-gray-400 hover:text-green-600 disabled:opacity-30 cursor-pointer"><ChevronLeft size={18}/></button>
+                     <div className="flex items-center gap-2 px-2">
+                       {[...Array(totalPages)].map((_, idx) => (
+                         <button key={idx} onClick={() => setCurrentPage(idx + 1)} className={`w-7 h-7 flex items-center justify-center rounded-lg text-xs font-bold transition-all cursor-pointer ${currentPage === idx + 1 ? 'bg-green-50 text-green-600' : 'text-gray-400 hover:bg-gray-50'}`}>{idx + 1}</button>
+                       ))}
+                     </div>
+                     <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} className="p-1 text-gray-400 hover:text-green-600 disabled:opacity-30 cursor-pointer"><ChevronRight size={18}/></button>
+                     <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(totalPages)} className="p-1 text-gray-400 hover:text-green-600 disabled:opacity-30 cursor-pointer"><ChevronsRight size={18}/></button>
+                   </div>
+                   <div className="text-[12px] text-gray-400 flex items-center gap-2">
+                      <div className="relative">
+                         <select value={itemsPerPage} onChange={(e) => setItemsPerPage(Number(e.target.value))} className="appearance-none bg-transparent font-bold text-gray-600 pr-4 cursor-pointer focus:outline-none">
+                           {[5, 10, 20, 50].map((val) => (<option key={val} value={val}>{val}</option>))}
+                         </select>
+                         <ChevronRight size={14} className="rotate-90 absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400"/>
+                      </div>
+                      <span className="ml-2">Items per page</span>
+                   </div>
+                 </div>
+               </div>
              </div>
-        </div>
-
-      </div>
-      <footer className="mt-8 text-[11px] text-gray-400 uppercase tracking-widest">© MA PERSIS KUDANG</footer>
-    </div>
-  );
-}
+             <footer className="mt-8 text-[11px] text-gray-400 text-left">© MA PERSIS KUDANG</footer>
+           </div>
+         );
+       }
