@@ -50,7 +50,7 @@ export async function POST(request: Request) {
     }
 
     // Jika status masih "menunggu"
-    if (pembayaranTerakhir.status === "menunggu") {
+    if (pembayaranTerakhir.status === "belum") {
       return NextResponse.json({ 
         error: "Pembayaran pendaftaran Anda sedang diverifikasi oleh Admin. Mohon tunggu hingga proses pembayaran telah dikonfirmasi oleh admin." 
       }, { status: 403 }); 
