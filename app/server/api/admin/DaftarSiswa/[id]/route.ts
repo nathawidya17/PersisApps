@@ -6,51 +6,39 @@ export const dynamic = "force-dynamic";
 
 // --- HELPER FUNCTIONS ---
 
-// 1. safeDate: Mengembalikan undefined jika kosong
 function safeDate(dateString: any) {
   if (!dateString || dateString === "" || dateString === "null") return undefined;
   const d = new Date(dateString);
   return isNaN(d.getTime()) ? undefined : d;
 }
 
-// 2. safeInt: Mengembalikan undefined jika kosong (SOLUSI ERROR SCREENSHOT 2)
 function safeInt(numberString: any) {
   if (!numberString || numberString === "") return undefined;
-  // Hapus karakter non-angka
   const cleanNum = String(numberString).replace(/[^0-9]/g, '');
   const n = parseInt(cleanNum);
   return isNaN(n) ? undefined : n;
 }
 
-// 3. safeString: Mengembalikan undefined jika kosong
 function safeString(text: any) {
   if (text === "" || text === undefined || text === null) return undefined;
   return String(text);
 }
 
-// 4. fixGender: Mapping Laki-laki -> Laki_laki (Sesuai Enum Prisma)
 function fixGender(gender: any) {
   if (!gender) return undefined;
   const g = String(gender).toLowerCase();
-  
-  // Mapping ke ENUM Prisma (Laki_laki atau Perempuan)
   if (g.includes("laki") || g === "l") return "Laki_laki"; 
   if (g.includes("perempuan") || g === "p") return "Perempuan"; 
-  
   return undefined;
 }
 
-// 5. fixUkuranBaju: Validasi Enum Ukuran Baju (SOLUSI ERROR SCREENSHOT 3)
 function fixUkuranBaju(size: any) {
   if (!size) return undefined;
-  const s = String(size).toUpperCase(); // Paksa jadi huruf besar (xl -> XL)
-  
-  // Cek apakah input sesuai dengan opsi Enum di Database
+  const s = String(size).toUpperCase();
   const validSizes = ["S", "M", "L", "XL", "XXL"];
   if (validSizes.includes(s)) {
-    return s as "S" | "M" | "L" | "XL" | "XXL"; // Type casting agar TS happy
+    return s as "S" | "M" | "L" | "XL" | "XXL";
   }
-  
   return undefined;
 }
 
@@ -60,6 +48,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     const { id } = await params;
     const idSiswa = Number(id);
     
+    // 1. Ambil Data Siswa
     let siswa = await prisma.tb_siswa.findFirst({
       where: { 
         OR: [
@@ -76,6 +65,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     });
 
     if (!siswa) {
+      // Fallback ke Pendaftar jika belum jadi Siswa
       const pendaftar = await prisma.tb_pendaftaran.findFirst({
         where: { nisn: id },
         include: { 
@@ -101,6 +91,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       });
     }
 
+    // 2. Ambil History Pendaftaran
     const pendaftaran = await prisma.tb_pendaftaran.findFirst({
         where: { nisn: siswa.NISN }
     });
@@ -111,6 +102,33 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
             where: { id_pendaftaran: pendaftaran.id_pendaftar }
         });
     }
+
+    // 3. Ambil Master Tagihan (Untuk Cek Harga Asli)
+    const jenisTagihan = await prisma.tb_jenis_pembayaran.findMany({ where: { status: 'aktif' } });
+
+    // =====================================================================
+    // LOGIC PERBAIKAN HARGA (BUG FIXER) - SAMA SEPERTI DI PPDB
+    // =====================================================================
+    if (siswa.tb_pembayaran_daftar_ulang && siswa.tb_pembayaran_daftar_ulang.length > 0) {
+        siswa.tb_pembayaran_daftar_ulang = siswa.tb_pembayaran_daftar_ulang.map((pay: any) => {
+            // Cari harga asli dari master berdasarkan ID Jenis Pembayaran
+            const masterData = jenisTagihan.find(j => j.id_jenis_pembayaran === pay.id_jenis_pembayaran);
+            
+            if (masterData) {
+                const nominalDiDB = Number(pay.nominal);
+                const nominalAsli = Number(masterData.nominal);
+
+                // JIKA status LUNAS tapi nominal di DB JAUH LEBIH BESAR dari harga asli (toleransi 10%)
+                // Maka itu adalah BUG TOTAL. Kita ganti dengan harga asli.
+                if (pay.status === 'lunas' && nominalDiDB > nominalAsli * 1.1) {
+                    // Override nominal dengan harga asli agar Frontend menampilkan angka yang benar (misal 150rb, bukan 745rb)
+                    return { ...pay, nominal: nominalAsli }; 
+                }
+            }
+            return pay;
+        });
+    }
+    // =====================================================================
 
     const finalData = {
         ...siswa,
@@ -131,11 +149,13 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         tanggal_lahir_ibu: siswa.tb_orang_tua[0]?.tanggal_lahir_ibu || null,
         
         no_hp_orang_tua: siswa.tb_orang_tua[0]?.no_hp_orang_tua || "",
+        
         tb_pembayaran_pendaftaran: historyPendaftaran, 
+        
+        // Data pembayaran di sini sekarang SUDAH DIPERBAIKI angkanya
         tb_pembayaran_daftar_ulang: siswa.tb_pembayaran_daftar_ulang
     };
 
-    const jenisTagihan = await prisma.tb_jenis_pembayaran.findMany({ where: { status: 'aktif' } });
     const jenisTagihanFiltered = filterTagihanByGender(jenisTagihan, siswa.jenis_kelamin);
 
     return NextResponse.json({ detailSiswa: finalData, jenisTagihan: jenisTagihanFiltered });
@@ -164,35 +184,25 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
             where: { id_siswa: idSiswa },
             data: {
                 nama_lengkap: body.nama_lengkap,
-                
-                // FIX: Gender Laki-laki -> Laki_laki
                 jenis_kelamin: fixGender(body.jenis_kelamin), 
-                
                 NISN: safeString(body.NISN),
                 email: safeString(body.email),
                 no_hp: safeString(body.no_hp),
-                
                 nik: safeString(body.nik),
                 no_kk: safeString(body.no_kk),
-                anak_ke: safeInt(body.anak_ke),            // Int (Undefined jika kosong)
-                jumlah_saudara: safeInt(body.jumlah_saudara), // Int (Undefined jika kosong)
-                
+                anak_ke: safeInt(body.anak_ke),            
+                jumlah_saudara: safeInt(body.jumlah_saudara), 
                 alamat: safeString(body.alamat),
                 rt: safeString(body.rt),
                 rw: safeString(body.rw),
                 kode_pos: safeString(body.kode_pos),
-                
                 tempat_lahir: safeString(body.tempat_lahir),
                 tanggal_lahir: safeDate(body.tanggal_lahir),
-                
                 asal_sekolah: safeString(body.asal_sekolah),
                 alamat_sekolah: safeString(body.alamat_sekolah),
-                tahun_lulus: safeInt(body.tahun_lulus),         // Int
-                kode_pos_sekolah: safeInt(body.kode_pos_sekolah), // Int
-                
-                // FIX: Ukuran Baju String -> Enum
+                tahun_lulus: safeInt(body.tahun_lulus),        
+                kode_pos_sekolah: safeInt(body.kode_pos_sekolah), 
                 ukuran_baju: fixUkuranBaju(body.ukuran_baju), 
-                
                 jumlah_hafalan: safeString(body.jumlah_hafalan),
             }
         });
@@ -210,14 +220,12 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
                   pekerjaan_ayah: safeString(body.pekerjaan_ayah),
                   pendidikan_ayah: safeString(body.pendidikan_ayah),
                   penghasilan_ayah: safeString(body.penghasilan_ayah),
-                  
                   nama_ibu: safeString(body.nama_ibu),
                   tempat_lahir_ibu: safeString(body.tempat_lahir_ibu),
                   tanggal_lahir_ibu: safeDate(body.tanggal_lahir_ibu),
                   pekerjaan_ibu: safeString(body.pekerjaan_ibu),
                   pendidikan_ibu: safeString(body.pendidikan_ibu),
                   penghasilan_ibu: safeString(body.penghasilan_ibu),
-                  
                   no_hp_orang_tua: safeString(body.no_hp_orang_tua)
               }
           });
@@ -245,7 +253,6 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
         const pendaftaranTarget = await prisma.tb_pendaftaran.findFirst({ where: { nisn: siswaTarget.NISN } });
 
         await prisma.$transaction(async (tx) => {
-            // Hapus relasi berurutan
             await tx.tb_pembayaran_daftar_ulang.deleteMany({ where: { id_siswa: idSiswa } });
             await tx.tb_orang_tua.deleteMany({ where: { id_siswa: idSiswa } });
             await tx.tb_prestasi.deleteMany({ where: { id_siswa: idSiswa } });

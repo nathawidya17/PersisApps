@@ -73,7 +73,7 @@ export default function PembayaranPage() {
         "Rincian": item.list_items || "-", 
         "Metode": (item.metode || "Cash").toUpperCase(),
         "Nominal": item.total_nominal,
-        "Status": item.status,
+        "Status Verifikasi": item.status,
     }));
 
     const ws = XLSX.utils.json_to_sheet(exportData);
@@ -82,33 +82,40 @@ export default function PembayaranPage() {
     XLSX.writeFile(wb, `Transaksi_${new Date().toISOString().slice(0,10)}.xlsx`);
   };
 
-  // --- EXPORT 2: REKAPITULASI KHUSUS ---
+  // --- EXPORT 2: REKAPITULASI KHUSUS (FIXED: HEADER MUNCUL) ---
   const handleExportRekap = () => {
     if (sortedPaymentTypes.length === 0) return alert("Tidak ada data rekap");
 
     const sheetData: any[] = [];
     
     sortedPaymentTypes.forEach(type => {
+        // 1. Judul Grup
         sheetData.push(["DATA TAGIHAN " + type.toUpperCase()]); 
-        sheetData.push(["ID TRANSAKSI", "NAMA SISWA", "METODE", "STATUS", "TANGGAL BAYAR"]); 
+        
+        // 2. Header Kolom (INI YANG TADI HILANG)
+        sheetData.push(["ID TRANSAKSI", "NAMA SISWA", "METODE", "TOTAL BAYAR (IDR)", "STATUS", "TANGGAL BAYAR"]); 
 
+        // 3. Isi Data
         paymentTypeGroups[type].forEach(item => {
             const dateObj = new Date(item.date);
             sheetData.push([
                 item.group_id, 
                 item.nama_siswa,
                 (item.metode || "CASH").toUpperCase(),
-                item.status,
+                item.total_nominal, // Total Bayar
+                item.status,        // Status
                 dateObj.toLocaleDateString('id-ID') + ' ' + dateObj.toLocaleTimeString('id-ID')
             ]);
         });
 
+        // Spasi antar grup
         sheetData.push([]); 
         sheetData.push([]); 
     });
 
     const ws = XLSX.utils.aoa_to_sheet(sheetData);
-    ws['!cols'] = [{ wch: 15 }, { wch: 30 }, { wch: 15 }, { wch: 15 }, { wch: 25 }];
+    // Atur Lebar Kolom Biar Rapi
+    ws['!cols'] = [{ wch: 15 }, { wch: 30 }, { wch: 15 }, { wch: 20 }, { wch: 20 }, { wch: 25 }];
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Rekap_Pembayaran");
@@ -183,12 +190,11 @@ export default function PembayaranPage() {
           itemsPerPage={itemsPerPage} 
           totalItems={filteredData.length} 
           onPageChange={setCurrentPage} 
-          // FIX: Type error 'val' implicitly any
           onLimitChange={(val: number) => setItemsPerPage(val)} 
         />
       </div>
 
-      {/* === TABEL 2: REKAPITULASI PER JENIS (SEKARANG TIAP TABEL PUNYA PAGINATION SENDIRI) === */}
+      {/* === TABEL 2: REKAPITULASI PER JENIS === */}
       <div className="flex items-center justify-between border-t border-gray-200 pt-8 mb-6">
          <h2 className="text-xl font-bold text-gray-800">Rekapitulasi Per Jenis Pembayaran</h2>
          <button 
@@ -217,11 +223,9 @@ export default function PembayaranPage() {
 
 // --- KOMPONEN BARU: TABLE PER JENIS PEMBAYARAN (INDEPENDENT PAGINATION) ---
 function RekapTable({ type, transactions }: { type: string, transactions: any[] }) {
-    // State lokal untuk pagination masing-masing tabel
     const [page, setPage] = useState(1);
     const [limit, setLimit] = useState(5);
 
-    // Hitung data yang ditampilkan
     const indexOfLast = page * limit;
     const indexOfFirst = indexOfLast - limit;
     const currentData = transactions.slice(indexOfFirst, indexOfLast);
@@ -243,9 +247,10 @@ function RekapTable({ type, transactions }: { type: string, transactions: any[] 
                 <table className="w-full text-left">
                     <thead className="bg-gray-50/30">
                         <tr className="text-[10px] text-gray-400 font-bold uppercase tracking-widest border-b border-gray-50">
-                            <th className="py-3 px-6 w-1/3">Siswa</th>
+                            <th className="py-3 px-6 w-1/4">Siswa</th>
                             <th className="py-3 px-6 text-center">Waktu Bayar</th>
                             <th className="py-3 px-6 text-center">Metode</th>
+                            <th className="py-3 px-6 text-right">Total Bayar</th>
                             <th className="py-3 px-6 text-center">Status</th>
                         </tr>
                     </thead>
@@ -259,6 +264,9 @@ function RekapTable({ type, transactions }: { type: string, transactions: any[] 
                                     {new Date(item.date).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                                 </td>
                                 <td className="py-3 px-6 text-center"><BadgeMetode metode={item.metode} /></td>
+                                <td className="py-3 px-6 text-right font-medium text-gray-700">
+                                    IDR {(item.total_nominal || 0).toLocaleString('id-ID')}
+                                </td>
                                 <td className="py-3 px-6 text-center"><StatusBadge status={item.status} /></td>
                             </tr>
                         ))}
@@ -266,7 +274,6 @@ function RekapTable({ type, transactions }: { type: string, transactions: any[] 
                 </table>
             </div>
 
-            {/* Pagination Footer Khusus Tabel Ini */}
             <PaginationFooter 
                 currentPage={page}
                 totalPages={totalPages}
@@ -278,7 +285,6 @@ function RekapTable({ type, transactions }: { type: string, transactions: any[] 
         </div>
     );
 }
-
 
 // --- SUB COMPONENTS (UI HELPERS) ---
 

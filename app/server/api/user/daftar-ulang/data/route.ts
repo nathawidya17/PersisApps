@@ -56,12 +56,7 @@ export async function POST(request: Request) {
       }, { status: 403 }); 
     }
 
-    // Jika status "belum" atau "cicil" (Belum Lunas)
-    if (pembayaranTerakhir.status !== "lunas") {
-        return NextResponse.json({ 
-          error: `Status pembayaran pendaftaran Anda saat ini: ${pembayaranTerakhir.status}. Harap lunasi pembayaran pendaftaran untuk melanjutkan.` 
-        }, { status: 403 });
-    }
+  
 
     // --- JIKA LOLOS SEMUA VALIDASI ---
 

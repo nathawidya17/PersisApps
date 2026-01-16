@@ -13,14 +13,14 @@ export async function GET() {
 
     const daftarUlang = await prisma.tb_pembayaran_daftar_ulang.findMany({
       include: { 
-        tb_jenis_pembayaran: true,
+        tb_jenis_pembayaran: true, // PENTING: Ambil harga asli master
         tb_siswa: true, 
         tb_daftar_ulang: { include: { tb_pendaftaran: true } }
       },
       orderBy: { created_at: 'desc' }
     });
 
-    // 2. Gabungkan Data & MAP FIELD 'metode_pembayaran'
+    // 2. Gabungkan Data & Siapkan Field Nominal Asli
     const allTransactions = [
       ...pendaftaran.map((p: any) => ({
         id: p.id_bayar_pendaftaran,
@@ -28,22 +28,33 @@ export async function GET() {
         nisn: p.tb_pendaftaran?.nisn || "UNKNOWN",
         nama_siswa: p.tb_pendaftaran?.nama_lengkap || "Tanpa Nama",
         item: "Biaya Pendaftaran",
-        nominal: Number(p.nominal),
+        
+        // Nominal yang tersimpan di transaksi (Bisa jadi Total Bug)
+        nominal_db: Number(p.nominal),
+        // Nominal Seharusnya (Harga Satuan). Pendaftaran biasanya 200k fix.
+        nominal_asli: 200000, 
+
         status: p.status,
         date: p.created_at,
-        metode: p.metode_pembayaran || "cash", // Fix: Ambil metode dari DB
+        metode: p.metode_pembayaran || "cash",
         bukti: p.bukti_pembayaran
       })),
+      
       ...daftarUlang.map((d: any) => ({
         id: d.id_pembayaran_daftar_ulang,
         type: "DaftarUlang",
         nisn: d.tb_siswa?.NISN || d.tb_daftar_ulang?.tb_pendaftaran?.nisn || "UNKNOWN",
         nama_siswa: d.tb_siswa?.nama_lengkap || d.tb_daftar_ulang?.tb_pendaftaran?.nama_lengkap || "Tanpa Nama",
         item: d.tb_jenis_pembayaran?.nama_pembayaran || "Item",
-        nominal: Number(d.nominal),
+        
+        // Nominal yang tersimpan di transaksi (Bisa jadi Total Bug)
+        nominal_db: Number(d.nominal),
+        // Nominal Seharusnya (Harga Satuan Master)
+        nominal_asli: Number(d.tb_jenis_pembayaran?.nominal || 0),
+
         status: d.status,
         date: d.created_at,
-        metode: d.metode_pembayaran || "cash", // Fix: Ambil metode dari DB
+        metode: d.metode_pembayaran || "cash",
         bukti: d.bukti_pembayaran
       }))
     ];
@@ -64,39 +75,57 @@ export async function GET() {
                 nisn: trx.nisn,
                 nama_siswa: trx.nama_siswa,
                 date: trx.date,
-                total_nominal: 0,
+                // Kita hitung nanti setelah semua item terkumpul
+                total_nominal: 0, 
                 jumlah_item: 0,
                 status_summary: [],
-                items: [] // Array untuk menampung item detail
+                items: [] 
             };
         }
 
-        groups[groupKey].total_nominal += trx.nominal;
         groups[groupKey].jumlah_item += 1;
         groups[groupKey].status_summary.push(trx.status);
         groups[groupKey].items.push(trx);
     });
 
-    // 4. Format Output List
+    // 4. Format Output List & FIX NOMINAL BUG
     const result = Object.values(groups).map((g: any) => {
-        const rawStatuses = g.status_summary;
-        let finalStatus = "NEED APPROVAL";
+        const items = g.items;
+        
+        // --- LOGIC PERBAIKAN TOTAL BAYAR ---
+        const sumStored = items.reduce((acc: number, curr: any) => acc + curr.nominal_db, 0);
+        const sumMaster = items.reduce((acc: number, curr: any) => acc + curr.nominal_asli, 0);
+        
+        // Cek apakah semua nominal di DB identik (Tanda Bug Duplikasi Total)
+        const firstNominal = items[0].nominal_db;
+        const allNominalsAreSame = items.every((i: any) => i.nominal_db === firstNominal);
 
-        // Logic Status: Kalau ada yang 'belum'/'menunggu' -> Need Approval
+        // LOGIC:
+        // Jika item lebih dari 1 DAN nominal semua sama DAN Total di DB jauh lebih besar dari Total Master
+        // Maka ini adalah Bug "Total Tersimpan di Setiap Baris".
+        // Solusinya: Ambil nilai dari SALAH SATU baris saja.
+        if (items.length > 1 && allNominalsAreSame && sumStored > sumMaster) {
+             g.total_nominal = firstNominal; 
+        } else {
+             // Normal Case (SPP atau Item Satuan): Jumlahkan semua
+             g.total_nominal = sumStored;
+        }
+
+        // --- Logic Status ---
+        const rawStatuses = g.status_summary;
+        let finalVerifStatus = "NEED APPROVAL";
         const isPending = rawStatuses.some((s: string) => s === 'belum' || s === 'menunggu');
         const isRejected = rawStatuses.some((s: string) => s === 'ditolak' || s === 'Rejected');
 
-        if (isPending) {
-            finalStatus = "NEED APPROVAL";
-        } else if (isRejected) {
-            finalStatus = "Rejected";
-        } else {
-            // Lunas atau Cicil -> Approved
-            finalStatus = "Approved";
-        }
+        if (isPending) finalVerifStatus = "NEED APPROVAL";
+        else if (isRejected) finalVerifStatus = "Rejected";
+        else finalVerifStatus = "Approved";
 
-        // --- FEATURE: LIST NAMA ITEM UNTUK EXCEL ---
-        // Menggabungkan nama item dengan koma (contoh: "SPP Juli, Uang Gedung")
+        // --- Logic Lunas/Cicil ---
+        let finalPaymentStatus = "Belum";
+        if (rawStatuses.includes('cicil')) finalPaymentStatus = "Cicil";
+        else if (rawStatuses.includes('lunas')) finalPaymentStatus = "Lunas";
+
         const listItems = g.items.map((i: any) => i.item).join(", ");
 
         return {
@@ -104,17 +133,20 @@ export async function GET() {
             nisn: g.nisn,
             nama_siswa: g.nama_siswa,
             date: g.date,
-            total_nominal: g.total_nominal,
+            
+            // Field yang dikirim ke Frontend
+            total_nominal: g.total_nominal, 
             jumlah_item: g.jumlah_item,
-            list_items: listItems, // <--- Field baru untuk rincian item di Excel
-            status: finalStatus,
-            metode: g.items[0]?.metode || "cash", // Ambil metode dari item pertama
+            list_items: listItems, 
+            status: finalVerifStatus,
+            status_pembayaran: finalPaymentStatus,
+            
+            metode: g.items[0]?.metode || "cash", 
             bukti_utama: g.items[0]?.bukti || null 
         };
     });
 
-    // --- FIX SORTING: TERBARU DI ATAS ---
-    // Menggunakan field 'date' yang valid, bukan 'waktu_transaksi'
+    // Sorting Terbaru
     result.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     return NextResponse.json(result);
