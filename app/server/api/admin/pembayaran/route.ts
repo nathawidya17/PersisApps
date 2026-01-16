@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 
 // =================================================================================
-// 1. GET: DATA TABEL (FIXED: VARIABEL MATCHING DENGAN FRONTEND)
+// 1. GET: DATA TABEL
 // =================================================================================
 export async function GET() {
   try {
@@ -22,12 +22,6 @@ export async function GET() {
       orderBy: { created_at: 'desc' }
     });
 
-    const dateOptions: Intl.DateTimeFormatOptions = {
-      day: 'numeric', month: 'numeric', year: 'numeric',
-      hour: '2-digit', minute: '2-digit', second: '2-digit',
-      timeZone: 'Asia/Jakarta', hour12: false 
-    };
-
     const combinedData = [
       ...pendaftaran.map((p: any) => ({
         id: p.id_bayar_pendaftaran,
@@ -39,18 +33,12 @@ export async function GET() {
         list_items: "Biaya Pendaftaran", 
         jumlah_item: 1,
         
-        // --- PERBAIKAN UTAMA DISINI ---
-        // Frontend minta 'total_nominal', Backend DB punya 'nominal'
         total_nominal: Number(p.nominal || 0), 
         
         metode: p.metode_pembayaran || "cash",
         
-        // Status Verifikasi (Approved/Need Approval)
         status: p.status === 'ditolak' ? 'Rejected' : (['lunas', 'cicil'].includes(p.status) ? 'Approved' : 'Need Approval'),
         
-        // --- PERBAIKAN UTAMA DISINI ---
-        // Frontend minta 'status_pembayaran', Backend DB punya 'status'
-        // Kita kirim string 'Lunas', 'Cicil', atau 'Belum'
         status_pembayaran: (p.status === 'lunas' || p.status === 'cicil') ? p.status : "Belum",
         
         bukti_pembayaran: p.bukti_pembayaran, 
@@ -68,14 +56,12 @@ export async function GET() {
         list_items: d.tb_jenis_pembayaran?.nama_pembayaran || "Daftar Ulang",
         jumlah_item: 1,
 
-        // --- PERBAIKAN UTAMA DISINI ---
         total_nominal: Number(d.nominal || 0), 
         
         metode: d.metode_pembayaran || "cash",
         
         status: d.status === 'ditolak' ? 'Rejected' : (['lunas', 'cicil'].includes(d.status) ? 'Approved' : 'Need Approval'),
         
-        // --- PERBAIKAN UTAMA DISINI ---
         status_pembayaran: (d.status === 'lunas' || d.status === 'cicil') ? d.status : "Belum",
         
         bukti_pembayaran: d.bukti_pembayaran,
@@ -84,7 +70,6 @@ export async function GET() {
       }))
     ];
 
-    // Urutkan Terbaru
     combinedData.sort((a, b) => b.raw_date - a.raw_date);
 
     return NextResponse.json(combinedData.map(({ raw_date, ...item }) => item));
@@ -94,7 +79,7 @@ export async function GET() {
 }
 
 // =================================================================================
-// 2. PATCH: UPDATE STATUS
+// 2. PATCH: UPDATE STATUS (FIX: TARGET 199.000)
 // =================================================================================
 export async function PATCH(request: Request) {
   try {
@@ -115,7 +100,8 @@ export async function PATCH(request: Request) {
           include: { tb_pendaftaran: true }
         });
 
-        const hargaTagihan = 200000; 
+        // --- FIX DISINI: UBAH 200000 JADI 199000 ---
+        const hargaTagihan = 199000; 
 
         const history = await prisma.tb_pembayaran_pendaftaran.aggregate({
           where: { 
@@ -127,6 +113,8 @@ export async function PATCH(request: Request) {
         });
 
         const totalBayar = (history._sum.nominal || 0) + Number(trx?.nominal || 0);
+        
+        // Cek Lunas (Pakai >= biar aman)
         finalStatusDB = totalBayar >= hargaTagihan ? "lunas" : "cicil";
 
         await prisma.tb_pembayaran_pendaftaran.update({

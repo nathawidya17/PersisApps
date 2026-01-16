@@ -13,7 +13,7 @@ export async function GET() {
 
     const daftarUlang = await prisma.tb_pembayaran_daftar_ulang.findMany({
       include: { 
-        tb_jenis_pembayaran: true, // PENTING: Ambil harga asli master
+        tb_jenis_pembayaran: true, 
         tb_siswa: true, 
         tb_daftar_ulang: { include: { tb_pendaftaran: true } }
       },
@@ -22,41 +22,59 @@ export async function GET() {
 
     // 2. Gabungkan Data & Siapkan Field Nominal Asli
     const allTransactions = [
-      ...pendaftaran.map((p: any) => ({
-        id: p.id_bayar_pendaftaran,
-        type: "Pendaftaran",
-        nisn: p.tb_pendaftaran?.nisn || "UNKNOWN",
-        nama_siswa: p.tb_pendaftaran?.nama_lengkap || "Tanpa Nama",
-        item: "Biaya Pendaftaran",
-        
-        // Nominal yang tersimpan di transaksi (Bisa jadi Total Bug)
-        nominal_db: Number(p.nominal),
-        // Nominal Seharusnya (Harga Satuan). Pendaftaran biasanya 200k fix.
-        nominal_asli: 200000, 
+      ...pendaftaran.map((p: any) => {
+        const nominalDB = Number(p.nominal);
+        const hargaTarget = 199000; // FIX: Target Pendaftaran 199rb
 
-        status: p.status,
-        date: p.created_at,
-        metode: p.metode_pembayaran || "cash",
-        bukti: p.bukti_pembayaran
-      })),
+        // LOGIC FIX: Jika status di DB 'cicil' tapi uangnya >= 199.000, anggap 'lunas'
+        let realStatus = p.status;
+        if (p.status === 'cicil' && nominalDB >= hargaTarget) {
+            realStatus = 'lunas';
+        }
+
+        return {
+            id: p.id_bayar_pendaftaran,
+            type: "Pendaftaran",
+            nisn: p.tb_pendaftaran?.nisn || "UNKNOWN",
+            nama_siswa: p.tb_pendaftaran?.nama_lengkap || "Tanpa Nama",
+            item: "Biaya Pendaftaran",
+            
+            nominal_db: nominalDB,
+            nominal_asli: hargaTarget, 
+
+            status: realStatus, // Status yang sudah diperbaiki
+            date: p.created_at,
+            metode: p.metode_pembayaran || "cash",
+            bukti: p.bukti_pembayaran
+        };
+      }),
       
-      ...daftarUlang.map((d: any) => ({
-        id: d.id_pembayaran_daftar_ulang,
-        type: "DaftarUlang",
-        nisn: d.tb_siswa?.NISN || d.tb_daftar_ulang?.tb_pendaftaran?.nisn || "UNKNOWN",
-        nama_siswa: d.tb_siswa?.nama_lengkap || d.tb_daftar_ulang?.tb_pendaftaran?.nama_lengkap || "Tanpa Nama",
-        item: d.tb_jenis_pembayaran?.nama_pembayaran || "Item",
+      ...daftarUlang.map((d: any) => {
+        const nominalDB = Number(d.nominal);
+        const hargaMaster = Number(d.tb_jenis_pembayaran?.nominal || 0);
         
-        // Nominal yang tersimpan di transaksi (Bisa jadi Total Bug)
-        nominal_db: Number(d.nominal),
-        // Nominal Seharusnya (Harga Satuan Master)
-        nominal_asli: Number(d.tb_jenis_pembayaran?.nominal || 0),
+        let realStatus = d.status;
+        // Toleransi selisih sedikit, anggap lunas
+        if (d.status === 'cicil' && hargaMaster > 0 && nominalDB >= hargaMaster) {
+            realStatus = 'lunas';
+        }
 
-        status: d.status,
-        date: d.created_at,
-        metode: d.metode_pembayaran || "cash",
-        bukti: d.bukti_pembayaran
-      }))
+        return {
+            id: d.id_pembayaran_daftar_ulang,
+            type: "DaftarUlang",
+            nisn: d.tb_siswa?.NISN || d.tb_daftar_ulang?.tb_pendaftaran?.nisn || "UNKNOWN",
+            nama_siswa: d.tb_siswa?.nama_lengkap || d.tb_daftar_ulang?.tb_pendaftaran?.nama_lengkap || "Tanpa Nama",
+            item: d.tb_jenis_pembayaran?.nama_pembayaran || "Item",
+            
+            nominal_db: nominalDB,
+            nominal_asli: hargaMaster,
+
+            status: realStatus,
+            date: d.created_at,
+            metode: d.metode_pembayaran || "cash",
+            bukti: d.bukti_pembayaran
+        };
+      })
     ];
 
     // 3. GROUPING LOGIC (NISN + Menit yang sama)
@@ -75,8 +93,7 @@ export async function GET() {
                 nisn: trx.nisn,
                 nama_siswa: trx.nama_siswa,
                 date: trx.date,
-                // Kita hitung nanti setelah semua item terkumpul
-                total_nominal: 0, 
+                total_nominal: 0,
                 jumlah_item: 0,
                 status_summary: [],
                 items: [] 
@@ -84,6 +101,7 @@ export async function GET() {
         }
 
         groups[groupKey].jumlah_item += 1;
+        // Push status yang SUDAH DIPERBAIKI ke summary
         groups[groupKey].status_summary.push(trx.status);
         groups[groupKey].items.push(trx);
     });
@@ -92,26 +110,20 @@ export async function GET() {
     const result = Object.values(groups).map((g: any) => {
         const items = g.items;
         
-        // --- LOGIC PERBAIKAN TOTAL BAYAR ---
+        // --- LOGIC PERBAIKAN TOTAL BAYAR (BUG TOTAL) ---
         const sumStored = items.reduce((acc: number, curr: any) => acc + curr.nominal_db, 0);
         const sumMaster = items.reduce((acc: number, curr: any) => acc + curr.nominal_asli, 0);
         
-        // Cek apakah semua nominal di DB identik (Tanda Bug Duplikasi Total)
         const firstNominal = items[0].nominal_db;
         const allNominalsAreSame = items.every((i: any) => i.nominal_db === firstNominal);
 
-        // LOGIC:
-        // Jika item lebih dari 1 DAN nominal semua sama DAN Total di DB jauh lebih besar dari Total Master
-        // Maka ini adalah Bug "Total Tersimpan di Setiap Baris".
-        // Solusinya: Ambil nilai dari SALAH SATU baris saja.
         if (items.length > 1 && allNominalsAreSame && sumStored > sumMaster) {
              g.total_nominal = firstNominal; 
         } else {
-             // Normal Case (SPP atau Item Satuan): Jumlahkan semua
              g.total_nominal = sumStored;
         }
 
-        // --- Logic Status ---
+        // --- Logic Status Verifikasi ---
         const rawStatuses = g.status_summary;
         let finalVerifStatus = "NEED APPROVAL";
         const isPending = rawStatuses.some((s: string) => s === 'belum' || s === 'menunggu');
@@ -123,8 +135,15 @@ export async function GET() {
 
         // --- Logic Lunas/Cicil ---
         let finalPaymentStatus = "Belum";
-        if (rawStatuses.includes('cicil')) finalPaymentStatus = "Cicil";
-        else if (rawStatuses.includes('lunas')) finalPaymentStatus = "Lunas";
+        
+        // Prioritas: Jika ada cicil, maka Cicil. Jika semua Lunas, maka Lunas.
+        if (rawStatuses.includes('cicil')) {
+            finalPaymentStatus = "Cicil";
+        } else if (rawStatuses.every((s: string) => s === 'lunas')) {
+            finalPaymentStatus = "Lunas";
+        } else if (rawStatuses.includes('lunas')) {
+            finalPaymentStatus = "Cicil"; // Campuran
+        }
 
         const listItems = g.items.map((i: any) => i.item).join(", ");
 
@@ -134,7 +153,7 @@ export async function GET() {
             nama_siswa: g.nama_siswa,
             date: g.date,
             
-            // Field yang dikirim ke Frontend
+            // Output Final
             total_nominal: g.total_nominal, 
             jumlah_item: g.jumlah_item,
             list_items: listItems, 
