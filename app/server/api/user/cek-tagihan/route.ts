@@ -2,11 +2,13 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { filterTagihanByGender } from "@/lib/validationByGender";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(req: Request) {
   try {
     const { nisn } = await req.json();
 
-    // 1. Cari Data Siswa
+    // 1. Cari Data Siswa (Cek di TB_SISWA dulu)
     const siswa = await prisma.tb_siswa.findUnique({
       where: { NISN: nisn },
       include: {
@@ -45,8 +47,7 @@ export async function POST(req: Request) {
       };
       riwayatBayarDaftarUlang = siswa.tb_pembayaran_daftar_ulang;
       
-      // FIX KUNCI: Cari history pendaftaran lama berdasarkan NISN asli
-      // Pastikan field 'nisn' di tb_pendaftaran sesuai dengan NISN di tb_siswa
+      // Ambil history pendaftaran dari tabel pendaftaran lama
       const pendaftaranLama = await prisma.tb_pendaftaran.findFirst({
           where: { nisn: nisn },
           include: { tb_pembayaran_pendaftaran: true }
@@ -106,34 +107,53 @@ export async function POST(req: Request) {
     let jenisTagihan = await prisma.tb_jenis_pembayaran.findMany({ where: { status: 'aktif' } });
     jenisTagihan = filterTagihanByGender(jenisTagihan, dataSiswa.jenis_kelamin);
 
-    // 3. Hitung Kalkulasi Terbayar (Sertakan status 'belum' agar cicilan baru tidak hilang)
+    // 3. Hitung Kalkulasi Terbayar (DENGAN LOGIC FIX BUG)
     const listTagihan = jenisTagihan.map((jt) => {
-        let terbayar = 0;
+        const nominalTagihan = Number(jt.nominal);
         const namaTagihan = jt.nama_pembayaran.toLowerCase().trim();
+        
+        let sumNominalDB = 0;
+        let payments = [];
 
+        // A. Tentukan sumber data pembayaran (Pendaftaran vs Daftar Ulang)
         if (namaTagihan.includes("pendaftaran")) {
-             // Hitung dari tb_pembayaran_pendaftaran
-             terbayar = riwayatBayarPendaftaran
-                .filter((p) => ['lunas', 'cicil', 'belum'].includes(p.status))
-                .reduce((acc, curr) => acc + Number(curr.nominal), 0);
+             payments = riwayatBayarPendaftaran.filter((p) => 
+                ['lunas', 'cicil', 'belum', 'menunggu'].includes(p.status)
+             );
         } else {
-             // Hitung dari tb_pembayaran_daftar_ulang
-             terbayar = riwayatBayarDaftarUlang
-                .filter((p) => 
-                    p.id_jenis_pembayaran === jt.id_jenis_pembayaran && 
-                    ['lunas', 'cicil', 'belum'].includes(p.status)
-                )
-                .reduce((acc, curr) => acc + Number(curr.nominal), 0);
+             payments = riwayatBayarDaftarUlang.filter((p) => 
+                p.id_jenis_pembayaran === jt.id_jenis_pembayaran && 
+                ['lunas', 'cicil', 'belum', 'menunggu'].includes(p.status)
+             );
         }
 
-        const nominalTagihan = Number(jt.nominal);
+        // B. Hitung Total Uang Masuk dari DB
+        sumNominalDB = payments.reduce((acc, curr) => acc + Number(curr.nominal), 0);
+
+        // C. === LOGIC ANTI-BUG (INTERCEPTOR) ===
+        // Masalah: Item 50rb tertulis 500rb di DB karena bug bulk payment.
+        // Solusi: Jika total di DB jauh lebih besar (>110%) dari harga asli, PAKSA pakai harga asli.
+        let terbayar = sumNominalDB;
+
+        if (sumNominalDB > nominalTagihan * 1.1) {
+            terbayar = nominalTagihan; // Reset jadi harga normal (misal 50.000)
+        }
+
+        // D. === LOGIC FIX PENDAFTARAN 199RB ===
+        // Jika ini tagihan pendaftaran, dan uang masuk sudah >= 199.000, anggap LUNAS (Full)
+        if (namaTagihan.includes("pendaftaran")) {
+            if (terbayar >= 199000) {
+                terbayar = nominalTagihan; // Paksa sama dengan target agar sisa 0 (Lunas)
+            }
+        }
+
         const sisa = Math.max(0, nominalTagihan - terbayar);
 
         return {
             id: jt.id_jenis_pembayaran,
             nama: jt.nama_pembayaran,
             total_tagihan: nominalTagihan,
-            terbayar: terbayar,
+            terbayar: terbayar, // <--- Ini angka yang sudah dibersihkan
             sisa: sisa,
             status: sisa <= 0 ? 'Lunas' : 'Belum Lunas'
         };
