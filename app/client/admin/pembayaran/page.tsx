@@ -2,14 +2,21 @@
 
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Search, Eye, Download, Loader2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { Search, Eye, Download, Loader2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Filter, ChevronDown } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as XLSX from "xlsx"; 
 
 export default function PembayaranPage() {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // --- STATE FILTER TABEL ATAS ---
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterStatus, setFilterStatus] = useState("Semua");
+
+  // --- STATE FILTER TABEL BAWAH (REKAP) ---
+  const [filterRekapType, setFilterRekapType] = useState("Semua"); // <--- STATE BARU
+
   const router = useRouter();
 
   // --- STATE PAGINATION UTAMA (DAFTAR TRANSAKSI) ---
@@ -31,12 +38,19 @@ export default function PembayaranPage() {
     }
   };
 
-  // --- FILTER & SORT DATA ---
+  // --- LOGIC FILTERING UTAMA (HANYA UNTUK TABEL ATAS) ---
   const filteredData = data
-    .filter(item => 
-      item.nama_siswa.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.nisn.includes(searchTerm)
-    )
+    .filter(item => {
+      // 1. Filter Search (Nama / NISN)
+      const matchSearch = 
+        item.nama_siswa.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.nisn.includes(searchTerm);
+      
+      // 2. Filter Status
+      const matchStatus = filterStatus === "Semua" || item.status === filterStatus;
+
+      return matchSearch && matchStatus;
+    })
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   // --- LOGIC PAGINATION UTAMA ---
@@ -45,21 +59,54 @@ export default function PembayaranPage() {
   const currentMainItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
   const totalMainPages = Math.ceil(filteredData.length / itemsPerPage);
 
-  // --- GROUPING DATA UNTUK REKAP ---
+  // --- GROUPING DATA UNTUK REKAP (MENGGUNAKAN 'data' UTUH) ---
   const paymentTypeGroups: { [key: string]: any[] } = {};
-  filteredData.forEach((transaction) => {
-    const itemsString = transaction.list_items || "Lainnya";
-    const items = itemsString.split(',').map((s: string) => s.trim());
-    items.forEach((itemName: string) => {
-      const cleanName = itemName.replace(/^\d+\s*x\s*/i, ""); 
-      if (!paymentTypeGroups[cleanName]) paymentTypeGroups[cleanName] = [];
-      paymentTypeGroups[cleanName].push(transaction);
-    });
+  
+  data.forEach((transaction) => {
+    if (transaction.items_detail && Array.isArray(transaction.items_detail)) {
+        transaction.items_detail.forEach((detail: any) => {
+            // Logic Status
+            let uiStatus = "Need Approval";
+            const s = detail.status ? detail.status.toLowerCase() : "";
+            if (s === 'lunas' || s === 'cicil') uiStatus = "Approved";
+            else if (s === 'ditolak') uiStatus = "Rejected";
+            else uiStatus = "Need Approval";
+
+            // Skip jika Need Approval
+            if (uiStatus === "Need Approval") return;
+
+            const cleanName = detail.name.replace(/^\d+\s*x\s*/i, ""); 
+            if (!paymentTypeGroups[cleanName]) paymentTypeGroups[cleanName] = [];
+            
+            paymentTypeGroups[cleanName].push({
+                ...transaction, 
+                total_nominal: detail.nominal, 
+                status: uiStatus
+            });
+        });
+    } else {
+        // Fallback Logic Lama
+        if (transaction.status === 'Approved' || transaction.status === 'Rejected') {
+             const itemsString = transaction.list_items || "Lainnya";
+             const items = itemsString.split(',').map((s: string) => s.trim());
+             items.forEach((itemName: string) => {
+                const cleanName = itemName.replace(/^\d+\s*x\s*/i, ""); 
+                if (!paymentTypeGroups[cleanName]) paymentTypeGroups[cleanName] = [];
+                paymentTypeGroups[cleanName].push(transaction); 
+             });
+        }
+    }
   });
 
   const sortedPaymentTypes = Object.keys(paymentTypeGroups).sort();
 
-  // --- EXPORT 1: DAFTAR TRANSAKSI (BUTTON ATAS) ---
+  // --- LOGIC DISPLAY REKAP (FILTERING BARU) ---
+  const displayedRekapTypes = filterRekapType === "Semua" 
+    ? sortedPaymentTypes 
+    : sortedPaymentTypes.filter(type => type === filterRekapType);
+
+
+  // --- EXPORT 1: DAFTAR TRANSAKSI ---
   const handleExportMain = () => {
     if (filteredData.length === 0) return alert("Tidak ada data");
     
@@ -82,39 +129,34 @@ export default function PembayaranPage() {
     XLSX.writeFile(wb, `Transaksi_${new Date().toISOString().slice(0,10)}.xlsx`);
   };
 
-  // --- EXPORT 2: REKAPITULASI KHUSUS (FIXED: HEADER MUNCUL) ---
+  // --- EXPORT 2: REKAPITULASI ---
   const handleExportRekap = () => {
+    // Export tetap semua data yang valid (tidak terpengaruh filter tampilan agar lengkap)
     if (sortedPaymentTypes.length === 0) return alert("Tidak ada data rekap");
 
     const sheetData: any[] = [];
     
     sortedPaymentTypes.forEach(type => {
-        // 1. Judul Grup
         sheetData.push(["DATA TAGIHAN " + type.toUpperCase()]); 
-        
-        // 2. Header Kolom (INI YANG TADI HILANG)
         sheetData.push(["ID TRANSAKSI", "NAMA SISWA", "METODE", "TOTAL BAYAR (IDR)", "STATUS", "TANGGAL BAYAR"]); 
 
-        // 3. Isi Data
         paymentTypeGroups[type].forEach(item => {
             const dateObj = new Date(item.date);
             sheetData.push([
                 item.group_id, 
                 item.nama_siswa,
                 (item.metode || "CASH").toUpperCase(),
-                item.total_nominal, // Total Bayar
-                item.status,        // Status
+                item.total_nominal, 
+                item.status,        
                 dateObj.toLocaleDateString('id-ID') + ' ' + dateObj.toLocaleTimeString('id-ID')
             ]);
         });
 
-        // Spasi antar grup
         sheetData.push([]); 
         sheetData.push([]); 
     });
 
     const ws = XLSX.utils.aoa_to_sheet(sheetData);
-    // Atur Lebar Kolom Biar Rapi
     ws['!cols'] = [{ wch: 15 }, { wch: 30 }, { wch: 15 }, { wch: 20 }, { wch: 20 }, { wch: 25 }];
 
     const wb = XLSX.utils.book_new();
@@ -131,24 +173,40 @@ export default function PembayaranPage() {
       <h2 className="text-xl font-bold text-gray-800 mb-6">Daftar Transaksi Masuk</h2>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-12">
-        {/* Toolbar */}
-        <div className="p-5 border-b border-gray-50 flex justify-between">
-           <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" size={16}/>
-              <input 
-                type="text" 
-                placeholder="Cari Siswa / NISN..." 
-                className="pl-10 pr-4 py-2 bg-gray-50 border border-gray-100 rounded-lg text-sm w-64 focus:outline-none focus:ring-1 focus:ring-green-500 transition-all"
-                value={searchTerm}
-                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }} 
-              />
+        <div className="p-5 border-b border-gray-50 flex flex-col md:flex-row justify-between gap-4">
+           
+           <div className="flex items-center gap-3 flex-1">
+               <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" size={16}/>
+                  <input 
+                    type="text" 
+                    placeholder="Cari Siswa / NISN..." 
+                    className="pl-10 pr-4 py-2 bg-gray-50 border border-gray-100 rounded-lg text-sm w-64 focus:outline-none focus:ring-1 focus:ring-green-500 transition-all"
+                    value={searchTerm}
+                    onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }} 
+                  />
+               </div>
+
+               <div className="relative">
+                  <select 
+                    value={filterStatus}
+                    onChange={(e) => { setFilterStatus(e.target.value); setCurrentPage(1); }}
+                    className="appearance-none pl-4 pr-10 py-2 bg-gray-50 border border-gray-100 rounded-lg text-sm font-medium text-gray-600 focus:outline-none focus:ring-1 focus:ring-green-500 cursor-pointer hover:bg-gray-100 transition-all"
+                  >
+                    <option value="Semua">Semua Status</option>
+                    <option value="Approved">Approved</option>
+                    <option value="Need Approval">Need Approval</option>
+                    <option value="Rejected">Rejected</option>
+                  </select>
+                  <Filter className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={14}/>
+               </div>
            </div>
-           <button onClick={handleExportMain} className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors active:scale-95 cursor-pointer">
+
+           <button onClick={handleExportMain} className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors active:scale-95 cursor-pointer whitespace-nowrap">
              <Download size={16}/> Export Transaksi
            </button>
         </div>
 
-        {/* Table Main */}
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead className="bg-gray-50/50">
@@ -183,7 +241,6 @@ export default function PembayaranPage() {
           </table>
         </div>
 
-        {/* Pagination Footer Main */}
         <PaginationFooter 
           currentPage={currentPage} 
           totalPages={totalMainPages} 
@@ -195,25 +252,44 @@ export default function PembayaranPage() {
       </div>
 
       {/* === TABEL 2: REKAPITULASI PER JENIS === */}
-      <div className="flex items-center justify-between border-t border-gray-200 pt-8 mb-6">
-         <h2 className="text-xl font-bold text-gray-800">Rekapitulasi Per Jenis Pembayaran</h2>
+      <div className="flex flex-col md:flex-row md:items-center justify-between border-t border-gray-200 pt-8 mb-6 gap-4">
+         <div className="flex items-center gap-4">
+            <h2 className="text-xl font-bold text-gray-800">Rekapitulasi</h2>
+            
+            {/* --- NEW: DROPDOWN FILTER REKAP --- */}
+            <div className="relative">
+                <select 
+                    value={filterRekapType}
+                    onChange={(e) => setFilterRekapType(e.target.value)}
+                    className="appearance-none pl-4 pr-10 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 shadow-sm focus:outline-none focus:ring-1 focus:ring-green-500 cursor-pointer hover:bg-gray-50"
+                >
+                    <option value="Semua">Semua Jenis Tagihan</option>
+                    {sortedPaymentTypes.map(type => (
+                        <option key={type} value={type}>{type}</option>
+                    ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={14}/>
+            </div>
+         </div>
+
          <button 
            onClick={handleExportRekap}
-           className="flex items-center gap-2 px-4 py-2 bg-[#068A50] text-white rounded-lg text-sm font-bold shadow-md hover:bg-[#057a46] transition-colors active:scale-95 cursor-pointer"
+           className="flex items-center gap-2 px-4 py-2 bg-[#068A50] text-white rounded-lg text-sm font-bold shadow-md hover:bg-[#057a46] transition-colors active:scale-95 cursor-pointer whitespace-nowrap"
          >
            <Download size={16}/> Export Data Rekap
          </button>
       </div>
       
       <div className="grid grid-cols-1 gap-8 mb-8">
-        {sortedPaymentTypes.map((type) => (
+        {/* Loop menggunakan displayedRekapTypes yang sudah terfilter */}
+        {displayedRekapTypes.map((type) => (
            <RekapTable 
              key={type} 
              type={type} 
              transactions={paymentTypeGroups[type]} 
            />
         ))}
-        {sortedPaymentTypes.length === 0 && <div className="p-8 text-center bg-white border border-dashed rounded-xl text-gray-400">Belum ada data rekap.</div>}
+        {displayedRekapTypes.length === 0 && <div className="p-8 text-center bg-white border border-dashed rounded-xl text-gray-400">Belum ada data rekap yang disetujui.</div>}
       </div>
 
       <footer className="mt-8 text-[11px] text-gray-400 text-left">© MA PERSIS KUDANG</footer>
@@ -298,7 +374,12 @@ function BadgeMetode({ metode }: { metode: string }) {
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const styles: any = { 'Need Approval': 'bg-yellow-50 text-yellow-600', 'Approved': 'bg-green-50 text-green-600', 'Rejected': 'bg-red-50 text-red-600', 'Menunggu': 'bg-gray-50 text-gray-500' };
+  const styles: any = { 
+      'Need Approval': 'bg-yellow-50 text-yellow-600', 
+      'Approved': 'bg-green-50 text-green-600', 
+      'Rejected': 'bg-red-50 text-red-600', 
+      'Menunggu': 'bg-gray-50 text-gray-500' 
+  };
   return <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide whitespace-nowrap ${styles[status] || styles['Menunggu']}`}>{status}</span>;
 }
 
