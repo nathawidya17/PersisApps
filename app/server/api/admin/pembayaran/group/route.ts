@@ -23,7 +23,7 @@ export async function GET() {
 
     // 3. Mapping Awal (Flat Data)
     const allTransactions = [
-      // --- MAP PENDAFTARAN (FIXED: Tambah nominal_fix) ---
+      // --- MAP PENDAFTARAN ---
       ...pendaftaran.map((p: any) => ({
         id: p.id_bayar_pendaftaran,
         nisn: p.tb_pendaftaran?.nisn || "UNKNOWN",
@@ -31,7 +31,8 @@ export async function GET() {
         item: "Biaya Pendaftaran",
         
         nominal_db: Number(p.nominal), 
-        nominal_fix: Number(p.nominal), // <--- DITAMBAHKAN AGAR TYPE SAMA
+        nominal_fix: Number(p.nominal), 
+        target: 199000, // <--- TAMBAHAN: HARGA ASLI PENDAFTARAN
         
         status: p.status,
         date: p.created_at,
@@ -56,7 +57,8 @@ export async function GET() {
             item: d.tb_jenis_pembayaran?.nama_pembayaran || "Item",
             
             nominal_db: Number(d.nominal), 
-            nominal_fix: nominalItem,      
+            nominal_fix: nominalItem,
+            target: hargaMaster, // <--- TAMBAHAN: HARGA ASLI DAFTAR ULANG
             
             status: d.status,
             date: d.created_at,
@@ -69,7 +71,7 @@ export async function GET() {
     // 4. GROUPING LOGIC
     const groups: any = {};
 
-    allTransactions.forEach((trx: any) => { // Tambahkan type any biar aman
+    allTransactions.forEach((trx: any) => { 
         if (!trx.date) return;
         
         const dateObj = new Date(trx.date);
@@ -93,10 +95,11 @@ export async function GET() {
         groups[groupKey].jumlah_item += 1;
         groups[groupKey].status_summary.push(trx.status);
         
-        // Push rincian item (Sekarang aman karena nominal_fix ada di semua tipe)
+        // Push rincian item dengan TARGET
         groups[groupKey].items_detail.push({
             name: trx.item,
-            nominal: trx.nominal_fix, 
+            nominal: trx.nominal_fix,
+            target: trx.target, // <--- Field Target Masuk Sini
             status: trx.status
         });
     });
@@ -104,16 +107,14 @@ export async function GET() {
     // 5. Format Output
     const result = Object.values(groups).map((g: any) => {
         
-        // --- LOGIC TOTAL TRANSAKSI YANG BENAR ---
+        // Logic Total (Anti Bug)
         let finalTotal = 0;
         const nominals = g.raw_nominals;
 
         if (nominals.length > 1) {
-            // Cek apakah semua nominal sama persis (Ciri khas bug duplikat)
             const allSame = nominals.every((n: number) => n === nominals[0]);
-            
             if (allSame) {
-                finalTotal = nominals[0]; // Ambil satu saja (Contoh: 1 Juta)
+                finalTotal = nominals[0]; 
             } else {
                 finalTotal = nominals.reduce((acc: number, val: number) => acc + val, 0);
             }
@@ -142,7 +143,7 @@ export async function GET() {
             total_nominal: finalTotal, 
             jumlah_item: g.jumlah_item,
             list_items: listItems,
-            items_detail: g.items_detail,
+            items_detail: g.items_detail, // <--- Frontend akan baca 'target' dari sini
             status: finalVerif,
             status_pembayaran: finalPay,
             metode: "transfer",
