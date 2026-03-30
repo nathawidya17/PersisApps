@@ -57,7 +57,6 @@ export default function PembayaranPage() {
   data.forEach((transaction) => {
     if (transaction.items_detail && Array.isArray(transaction.items_detail)) {
         transaction.items_detail.forEach((detail: any) => {
-            // 1. Logic Status Verifikasi
             let uiStatus = "Need Approval";
             const s = detail.status ? detail.status.toLowerCase() : "";
             
@@ -65,15 +64,12 @@ export default function PembayaranPage() {
             else if (s === 'ditolak') uiStatus = "Rejected";
             else uiStatus = "Need Approval";
 
-            // Filter: Jangan tampilkan Need Approval di Rekap
             if (uiStatus === "Need Approval") return;
 
-            // 2. Hitung Sisa
             const target = detail.target || 0;
             const paid = detail.nominal || 0;
             const sisa = Math.max(0, target - paid);
             
-            // 3. Logic Keterangan (FIXED: Rejected = "-")
             let keterangan = "-";
             if (uiStatus === "Rejected") {
                 keterangan = "-";
@@ -93,37 +89,12 @@ export default function PembayaranPage() {
                 target_harga: target
             });
         });
-    } else {
-        // Fallback Logic Lama
-        if (transaction.status === 'Approved' || transaction.status === 'Rejected') {
-             const itemsString = transaction.list_items || "Lainnya";
-             const items = itemsString.split(',').map((s: string) => s.trim());
-             items.forEach((itemName: string) => {
-                const cleanName = itemName.replace(/^\d+\s*x\s*/i, ""); 
-                if (!paymentTypeGroups[cleanName]) paymentTypeGroups[cleanName] = [];
-                
-                // Logic ket fallback
-                let ketFallback = "-";
-                if(transaction.status === 'Rejected') ketFallback = "-";
-                else ketFallback = "Lunas"; // Asumsi lama
-
-                paymentTypeGroups[cleanName].push({
-                    ...transaction,
-                    total_nominal: transaction.total_nominal,
-                    sisa_tagihan: 0,
-                    keterangan: ketFallback,
-                    status: transaction.status,
-                    target_harga: 0
-                }); 
-             });
-        }
     }
   });
 
   const sortedPaymentTypes = Object.keys(paymentTypeGroups).sort();
   const displayedRekapTypes = filterRekapType === "Semua" ? sortedPaymentTypes : sortedPaymentTypes.filter(type => type === filterRekapType);
 
-  // --- EXPORT 1: TRANSAKSI ---
   const handleExportMain = () => {
     if (filteredData.length === 0) return alert("Tidak ada data");
     const exportData = filteredData.map((item, index) => ({
@@ -141,7 +112,6 @@ export default function PembayaranPage() {
     XLSX.writeFile(wb, `Transaksi_${new Date().toISOString().slice(0,10)}.xlsx`);
   };
 
-  // --- EXPORT 2: REKAPITULASI (UPDATED) ---
   const handleExportRekap = () => {
     if (sortedPaymentTypes.length === 0) return alert("Tidak ada data rekap");
 
@@ -166,10 +136,10 @@ export default function PembayaranPage() {
                 item.group_id, 
                 item.nama_siswa,
                 (item.metode || "CASH").toUpperCase(),
-                item.total_nominal, // Paid
-                item.sisa_tagihan,  // Sisa
-                item.status,        // Approved/Rejected
-                item.keterangan,    // Lunas/Belum Lunas/-
+                item.total_nominal, 
+                item.sisa_tagihan,  
+                item.status,        
+                item.keterangan,    
                 dateObj.toLocaleDateString('id-ID') + ' ' + dateObj.toLocaleTimeString('id-ID')
             ]);
         });
@@ -179,12 +149,6 @@ export default function PembayaranPage() {
     });
 
     const ws = XLSX.utils.aoa_to_sheet(sheetData);
-    ws['!cols'] = [
-        { wch: 15 }, { wch: 30 }, { wch: 15 }, 
-        { wch: 20 }, { wch: 20 }, 
-        { wch: 20 }, { wch: 15 }, { wch: 25 }
-    ];
-
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Rekap_Pembayaran");
     XLSX.writeFile(wb, `Rekap_Pembayaran_${new Date().toISOString().slice(0,10)}.xlsx`);
@@ -194,8 +158,6 @@ export default function PembayaranPage() {
 
   return (
     <div className="ml-64 bg-gray-100 min-h-screen p-8 font-sans">
-      
-      {/* === TABEL 1: DAFTAR TRANSAKSI MASUK === */}
       <h2 className="text-xl font-bold text-gray-800 mb-6">Daftar Transaksi Masuk</h2>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-12">
@@ -215,7 +177,7 @@ export default function PembayaranPage() {
                   <Filter className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={14}/>
                </div>
            </div>
-           <button onClick={handleExportMain} className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors active:scale-95 cursor-pointer whitespace-nowrap">
+           <button onClick={handleExportMain} className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer">
              <Download size={16}/> Export Transaksi
            </button>
         </div>
@@ -235,7 +197,7 @@ export default function PembayaranPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50 text-[12px] text-gray-600">
-              {currentMainItems.map((item, index) => (
+              {currentMainItems.map((item) => (
                 <tr key={item.group_id} className="hover:bg-gray-50 transition-colors">
                   <td className="py-4 px-6 font-medium text-gray-500 font-mono">{item.nisn}</td>
                   <td className="py-4 px-6">{item.nama_siswa}</td>
@@ -249,26 +211,24 @@ export default function PembayaranPage() {
                   </td>
                 </tr>
               ))}
-              {currentMainItems.length === 0 && <tr><td colSpan={8} className="py-8 text-center text-gray-400">Data tidak ditemukan</td></tr>}
             </tbody>
           </table>
         </div>
         <PaginationFooter currentPage={currentPage} totalPages={totalMainPages} itemsPerPage={itemsPerPage} totalItems={filteredData.length} onPageChange={setCurrentPage} onLimitChange={(val: number) => setItemsPerPage(val)} />
       </div>
 
-      {/* === TABEL 2: REKAPITULASI PER JENIS === */}
       <div className="flex flex-col md:flex-row md:items-center justify-between border-t border-gray-200 pt-8 mb-6 gap-4">
          <div className="flex items-center gap-4">
             <h2 className="text-xl font-bold text-gray-800">Rekapitulasi</h2>
             <div className="relative">
-                <select value={filterRekapType} onChange={(e) => setFilterRekapType(e.target.value)} className="appearance-none pl-4 pr-10 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 shadow-sm focus:outline-none focus:ring-1 focus:ring-green-500 cursor-pointer hover:bg-gray-50">
+                <select value={filterRekapType} onChange={(e) => setFilterRekapType(e.target.value)} className="appearance-none pl-4 pr-10 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 shadow-sm focus:outline-none focus:ring-1 focus:ring-green-500 cursor-pointer">
                     <option value="Semua">Semua Jenis Tagihan</option>
                     {sortedPaymentTypes.map(type => (<option key={type} value={type}>{type}</option>))}
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={14}/>
             </div>
          </div>
-         <button onClick={handleExportRekap} className="flex items-center gap-2 px-4 py-2 bg-[#068A50] text-white rounded-lg text-sm font-bold shadow-md hover:bg-[#057a46] transition-colors active:scale-95 cursor-pointer whitespace-nowrap">
+         <button onClick={handleExportRekap} className="flex items-center gap-2 px-4 py-2 bg-[#068A50] text-white rounded-lg text-sm font-bold shadow-md hover:bg-[#057a46] cursor-pointer">
            <Download size={16}/> Export Data Rekap
          </button>
       </div>
@@ -277,7 +237,6 @@ export default function PembayaranPage() {
         {displayedRekapTypes.map((type) => (
            <RekapTable key={type} type={type} transactions={paymentTypeGroups[type]} />
         ))}
-        {displayedRekapTypes.length === 0 && <div className="p-8 text-center bg-white border border-dashed rounded-xl text-gray-400">Belum ada data rekap yang disetujui.</div>}
       </div>
 
       <footer className="mt-8 text-[11px] text-gray-400 text-left">© MA PERSIS KUDANG</footer>
@@ -285,7 +244,6 @@ export default function PembayaranPage() {
   );
 }
 
-// --- KOMPONEN TABEL REKAP (UPDATED) ---
 function RekapTable({ type, transactions }: { type: string, transactions: any[] }) {
     const [page, setPage] = useState(1);
     const [limit, setLimit] = useState(5);
@@ -323,7 +281,7 @@ function RekapTable({ type, transactions }: { type: string, transactions: any[] 
                     </thead>
                     <tbody className="divide-y divide-gray-50 text-[12px] text-gray-600">
                         {currentData.map((item, idx) => (
-                            <tr key={`${type}-${item.group_id}-${idx}`} className="hover:bg-gray-50">
+                            <tr key={`${type}-${idx}`} className="hover:bg-gray-50">
                                 <td className="py-3 px-6 font-medium">{item.nama_siswa} <br /><span className="text-gray-400 font-mono text-[10px] font-normal">{item.nisn}</span></td>
                                 <td className="py-3 px-6 text-center whitespace-nowrap">{new Date(item.date).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</td>
                                 <td className="py-3 px-6 text-center"><BadgeMetode metode={item.metode} /></td>
@@ -341,10 +299,19 @@ function RekapTable({ type, transactions }: { type: string, transactions: any[] 
     );
 }
 
-// --- SUB COMPONENTS ---
 function BadgeMetode({ metode }: { metode: string }) {
-  const isTransfer = metode?.toLowerCase() === 'transfer';
-  return <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${isTransfer ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-orange-50 text-orange-600 border-orange-100'}`}>{metode || 'Cash'}</span>;
+  const m = metode?.toLowerCase();
+  const isTransfer = m === 'transfer';
+  const isCash = m === 'cash';
+  return (
+    <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${
+      isTransfer ? 'bg-blue-50 text-blue-600 border-blue-100' : 
+      isCash ? 'bg-orange-50 text-orange-600 border-orange-100' : 
+      'bg-gray-50 text-gray-600 border-gray-100'
+    }`}>
+      {metode ? metode.toUpperCase() : 'CASH'}
+    </span>
+  );
 }
 
 function StatusBadge({ status }: { status: string }) {

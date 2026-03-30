@@ -1,23 +1,19 @@
-"use client"; // 1. Pastikan ada ini karena pakai hooks
-
+"use client"; 
 import React from 'react';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation'; // 2. Import useRouter
+import { useRouter } from 'next/navigation'; 
 import Footer from '@/components/user/Footer';
 import Navbar from '@/components/user/Navbar';
 
 export default function LandingPage() {
-  const router = useRouter(); // 3. Inisialisasi router
+  const router = useRouter(); 
 
   return (
     <div className="min-h-screen font-sans text-[#333333] bg-white flex flex-col">
       
-      {/* --- NAVBAR --- */}
       <Navbar/>
 
-    {/* ========================================= */}
-      {/* HERO SECTION                              */}
-      {/* ========================================= */}
+      {/* HERO SECTION*/}
       <section className="relative w-full min-h-[620px] lg:min-h-[764px] flex flex-col lg:flex-row items-center bg-white overflow-hidden mb-0 lg:mb-12">
         
         {/* BACKGROUND */}
@@ -30,7 +26,6 @@ export default function LandingPage() {
               className="object-cover object-[43%_center]" 
               priority
             />
-            
           </div>
         </div>
 
@@ -71,9 +66,7 @@ export default function LandingPage() {
         </div>
       </section>
       
-      {/* ========================================= */}
-      {/* PROFIL SEKOLAH (GREEN CARD)               */}
-      {/* ========================================= */}
+      {/* PROFIL SEKOLAH (GREEN CARD)*/}
       <section className="px-4 lg:px-10 relative z-10 -mt-6 lg:mt-0 mt-10">
         
         {/* GREEN CARD CONTAINER */}
@@ -155,9 +148,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ========================================= */}
-      {/* BROSUR PPDB SECTION                       */}
-      {/* ========================================= */}
+      {/* BROSUR PPDB SECTION */}
       <section className="px-0 py-4 lg:py-20 text-center bg-white">
         <div className="px-6 mb-2 lg:mb-8">
           <h2 className="text-[26px] lg:text-5xl font-black text-[#333333] mb-0.5">
@@ -170,10 +161,6 @@ export default function LandingPage() {
 
         {/* CONTAINER BROSUR - MENGGUNAKAN ASPECT RATIO AGAR TIDAK ADA SPOT PUTIH */}
         <div className="w-full mx-auto relative flex justify-center mt-2">
-          {/* KUNCI: 
-              - h-auto dan aspect-[4/3] (sesuaikan dengan bentuk brosurmu)
-              - w-[95%] agar hampir mentok tapi tetap rapi
-          */}
           <div className="relative w-[95%] md:w-full lg:max-w-6xl aspect-[4/3] md:aspect-[16/9] lg:h-[1000px]">
             <Image
               src="/brosurr.png"
@@ -185,7 +172,6 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
-
       <Footer />
     </div>
   );

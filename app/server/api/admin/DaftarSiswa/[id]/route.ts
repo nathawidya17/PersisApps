@@ -106,9 +106,6 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     // 3. Ambil Master Tagihan (Untuk Cek Harga Asli)
     const jenisTagihan = await prisma.tb_jenis_pembayaran.findMany({ where: { status: 'aktif' } });
 
-    // =====================================================================
-    // LOGIC PERBAIKAN HARGA (BUG FIXER) - SAMA SEPERTI DI PPDB
-    // =====================================================================
     if (siswa.tb_pembayaran_daftar_ulang && siswa.tb_pembayaran_daftar_ulang.length > 0) {
         siswa.tb_pembayaran_daftar_ulang = siswa.tb_pembayaran_daftar_ulang.map((pay: any) => {
             // Cari harga asli dari master berdasarkan ID Jenis Pembayaran
@@ -119,9 +116,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
                 const nominalAsli = Number(masterData.nominal);
 
                 // JIKA status LUNAS tapi nominal di DB JAUH LEBIH BESAR dari harga asli (toleransi 10%)
-                // Maka itu adalah BUG TOTAL. Kita ganti dengan harga asli.
                 if (pay.status === 'lunas' && nominalDiDB > nominalAsli * 1.1) {
-                    // Override nominal dengan harga asli agar Frontend menampilkan angka yang benar (misal 150rb, bukan 745rb)
                     return { ...pay, nominal: nominalAsli }; 
                 }
             }

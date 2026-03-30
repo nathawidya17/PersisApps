@@ -10,7 +10,6 @@ export async function POST(req: Request) {
   try {
     const { email, password } = await req.json();
 
-    // Pastikan nama tabel di prisma sesuai (tb_user atau tb_users)
     const user = await prisma.tb_users.findUnique({ 
       where: { email: email } 
     });
